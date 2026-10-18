@@ -1,1 +1,15 @@
 @import "tailwindcss";
+
+@theme {
+    --font-sans: "Courier Prime", "Courier New", Courier, monospace;
+    --font-title: "Lunar Escape", "Pixelify Sans", monospace;
+    --font-pixel: "Pixelify Sans", "Courier New", Courier, monospace;
+}
+
+@font-face {
+    font-family: "Lunar Escape";
+    src: url("./assets/fonts/lunar-escape.regular.otf") format("opentype");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
