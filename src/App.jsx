@@ -1,5 +1,4 @@
 import { Link } from 'react-router';
-import { usePWA } from './hooks/usePWA';
 import bg from './assets/home-page.png';
 import FloatingBinary from './components/FloatingBinary';
 
