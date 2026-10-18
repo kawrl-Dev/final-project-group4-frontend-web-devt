@@ -1,4 +1,4 @@
-import { Link } from 'react-router';
+import { Link } from "react-router";
 import bg from './assets/home-page.png';
 import FloatingBinary from './components/FloatingBinary';
 
