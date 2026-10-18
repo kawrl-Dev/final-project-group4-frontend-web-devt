@@ -9,7 +9,7 @@ import ConfirmModal from '../components/leaderboard/ConfirmModal';
 export default function Leaderboard() {
   const { user, setUser, isAdmin } = useAuth();
   // Players see the top 10. Admins see every entry so they can moderate.
-  const { entries, loading, error, refetch, removeEntry } = useLeaderboard({ all: isAdmin });
+  const { entries, loading, error, refetch, removeEntry, updateScore, addEntry } = useLeaderboard({ all: isAdmin });
   const [pending, setPending] = useState(null); // entry awaiting delete confirmation
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState(null);
@@ -79,26 +79,30 @@ export default function Leaderboard() {
             currentUserID={user?.userID}
             isAdmin={isAdmin}
             onDelete={setPending}
+            onUpdateScore={updateScore}
           />
         )}
 
         {/* TEMPORARY: demo role switcher. Delete once real login supplies the role. */}
-        <div className="mt-8 flex items-center gap-2 border-t border-green-900/50 pt-4 text-xs text-green-600">
-          <span>dev: viewing as</span>
-          {Object.entries(MOCK_USERS).map(([key, u]) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => setUser(u)}
-              aria-pressed={user?.role === u.role}
-              className={`rounded border px-2 py-1 ${
-                user?.role === u.role ? 'border-green-400 text-green-300' : 'border-green-900 hover:border-green-700'
-              }`}
-            >
-              {key}
-            </button>
-          ))}
-        </div>
+
+        { import.meta.env.DEV &&
+          <div className="mt-8 flex items-center gap-2 border-t border-green-900/50 pt-4 text-xs text-green-600">
+            <span>dev: viewing as</span>
+            {Object.entries(MOCK_USERS).map(([key, u]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setUser(u)}
+                aria-pressed={user?.role === u.role}
+                className={`rounded border px-2 py-1 ${
+                  user?.role === u.role ? 'border-green-400 text-green-300' : 'border-green-900 hover:border-green-700'
+                }`}
+              >
+                {key}
+              </button>
+            ))}
+          </div>
+        }
       </div>
 
       {pending && (

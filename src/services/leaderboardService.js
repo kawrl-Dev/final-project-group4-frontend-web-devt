@@ -24,9 +24,9 @@ let entries = [
 ];
 
 const delay = (ms = 500) => new Promise((resolve) => setTimeout(resolve, ms));
-
+ 
 const sorted = () => [...entries].sort((a, b) => b.score - a.score);
-
+ 
 /**
  * GET /api/leaderboard
  * Players get the top 10. Admins pass { all: true } to see every entry.
@@ -37,7 +37,7 @@ export async function getLeaderboard({ all = false } = {}) {
   const list = sorted();
   return all ? list : list.slice(0, 10);
 }
-
+ 
 /**
  * DELETE /api/admin/leaderboard/:entryID  (admin only)
  * Real version: fetch(`${API}/api/admin/leaderboard/${entryID}`, { method: 'DELETE', headers: {...} })
@@ -45,4 +45,30 @@ export async function getLeaderboard({ all = false } = {}) {
 export async function deleteEntry(entryID) {
   await delay(300);
   entries = entries.filter((e) => e.entryID !== entryID);
+}
+ 
+/**
+ * PATCH /api/admin/leaderboard/:entryID  (admin only)
+ * Updates the score of an existing entry and returns the updated entry.
+ * Real version: fetch(`${API}/api/admin/leaderboard/${entryID}`, { method: 'PATCH', body: JSON.stringify({ score }), headers: {...} })
+ */
+export async function updateEntryScore(entryID, newScore) {
+  await delay(300);
+  const entry = entries.find((e) => e.entryID === entryID);
+  if (!entry) throw new Error(`Entry ${entryID} not found`);
+  entry.score = newScore;
+  return { ...entry };
+}
+ 
+/**
+ * POST /api/leaderboard  (authenticated player)
+ * Submits a new score after a game ends. Returns the created entry.
+ * Real version: fetch(`${API}/api/leaderboard`, { method: 'POST', body: JSON.stringify({ score, completedDate }), headers: {...} })
+ */
+export async function submitScore({ userID, player, score, completedDate }) {
+  await delay(300);
+  const entryID = `e${Date.now()}`;
+  const entry = { entryID, userID, player, score, completedDate };
+  entries.push(entry);
+  return { ...entry };
 }
