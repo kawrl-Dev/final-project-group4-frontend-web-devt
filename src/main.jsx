@@ -3,20 +3,15 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Routes, Route } from 'react-router';
 import App from './App';
-import Leaderboard from './pages/Leaderboard';
-import AuthProvider from './context/AuthProvider';
-import { MOCK_USERS } from './context/AuthContext';
+import Register from './pages/Register';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    {/* TEMPORARY AuthProvider: replace with the real one when login is done */}
-    <AuthProvider initialUser={MOCK_USERS.player}>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<App />} />
-          <Route path="/leaderboard" element={<Leaderboard />} />
-        </Routes>
-      </BrowserRouter>
-    </AuthProvider>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<App />} />
+        <Route path="/register" element={<Register />} />
+      </Routes>
+    </BrowserRouter>
   </React.StrictMode>
 );
