@@ -27,8 +27,6 @@ function MenuLink({ to, children }) {
 }
 
 export default function App() {
-  const { isInstallable, installApp, isOnline } = usePWA();
-
   return (
     <main className="relative min-h-screen overflow-hidden flex flex-col items-center justify-center bg-cover bg-center"
           style={{ backgroundImage: `url(${bg})` }}>
