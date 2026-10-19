@@ -55,7 +55,6 @@ export default function Login() {
             setError('Could not reach the server.');
         } finally {
             setLoading(false);
-            setPassword('');
             setShowPassword(false);
         }
     };

@@ -6,14 +6,15 @@ import App from './App';
 import Register from './pages/Register';
 import Login from './pages/Login';
 import Menu from './pages/Menu';
+import Skip from './components/Skip';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<App />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/login" element={<Login />} />
+        <Route path="/" element={<Skip><App /></Skip>} />
+        <Route path="/register" element={<Skip><Register /></Skip>} />
+        <Route path="/login" element={<Skip><Login /></Skip>} />
         <Route path="/menu" element={<Menu />} />
       </Routes>
     </BrowserRouter>

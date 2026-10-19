@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router';
 import { authFetch, clearToken, getToken } from '../lib/auth';
 import FloatingBinary from '../components/FloatingBinary';
 import bg from '../assets/home-page.png';
 
 const items = [
-    { label: 'New Game', to: '/new' },
+    { label: 'New Game', to: '/game' },
     { label: 'Load Game', to: '/load' },
     { label: 'Settings', to: '/settings'},
 ];
@@ -33,6 +33,7 @@ function Arrow() {
 
 export default function Menu() {
     const navigate = useNavigate();
+    const dialogRef = useRef(null);
     const [status, setStatus] = useState(() => (getToken() ? 'checking' : 'unauth'));
 
     const verify = useCallback(async (signal) => {
@@ -124,13 +125,37 @@ export default function Menu() {
                         ))}
 
                         <button
-                            onClick={handleLogout}
+                            onClick={() => dialogRef.current?.showModal()}
                             style={linkGlow}
                             className="group relative font-pixel text-brand-spring leading-[1.1] text-[clamp(1.5rem,4vw,3.5rem)] hover:text-white focus-visible:text-white focus-visible:outline-none">
                                 <Arrow />
                                 Log Out
                         </button>
                     </nav>
+
+                    <dialog
+                        ref={dialogRef}
+                        aria-labelledby="logout-title"
+                        className="m-auto w-[min(90vw,28rem)] border-2 border-brand-spring bg-brand-evergreen p-[clamp(1.25rem,3vw,2rem)] text-white shadow-[8px_8px_0_0_#00684A] backdrop:bg-black/70">
+                        <h2 id="logout-title" className="font-pixel font-normal text-white text-[clamp(1.5rem,3vw,2rem)]">
+                            Log out?
+                        </h2>
+                        <p className="mt-2 text-white/80 text-[clamp(0.875rem,1.3vw,1rem)]">
+                            You need to log in again after.
+                        </p>
+                        <div className="mt-6 grid grid-cols-2 gap-4">
+                            <button
+                                onClick={() => dialogRef.current?.close()}
+                                className="border-2 border-brand-spring py-[0.6em] text-brand-spring text-[clamp(1rem,1.8vw,1.25rem)] hover:bg-brand-spring hover:text-brand-slate focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">
+                                    Cancel
+                            </button>
+                            <button
+                                onClick={handleLogout}
+                                className="border-2 border-brand-spring bg-brand-spring py-[0.6em] text-brand-slate text-[clamp(1rem,1.8vw,1.25rem)] hover:bg-transparent hover:text-brand-spring focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">
+                                    Log Out
+                            </button>
+                        </div>
+                    </dialog>
                 </>
             )}
 

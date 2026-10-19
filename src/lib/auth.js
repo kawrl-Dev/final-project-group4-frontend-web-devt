@@ -1,8 +1,8 @@
 const KEY = 'minosdb_token';
 
-export const getToken = () => sessionStorage.getItem(KEY);
-export const saveToken = (t) => sessionStorage.setItem(KEY, t);
-export const clearToken = () => sessionStorage.removeItem(KEY);
+export const getToken = () => localStorage.getItem(KEY);
+export const saveToken = (t) => localStorage.setItem(KEY, t);
+export const clearToken = () => localStorage.removeItem(KEY);
 
 export function authFetch(url, options = {}) {
     const token = getToken();
