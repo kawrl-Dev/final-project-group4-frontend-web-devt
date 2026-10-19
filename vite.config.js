@@ -9,7 +9,11 @@ export default defineConfig({
     tailwindcss(), react()],
     server: {
       proxy: {
-        '/api': 'http://localhost:5000'
+        '/api': {
+          target: 'https://minosdb-api.onrender.com',
+          changeOrigin: true,
+          secure: true,
+        },
       },
     },
 })
