@@ -1,5 +1,3 @@
-import { useState } from 'react';
-import bg from '../assets/home-page.png';
 import WindowProvider from '../context/WindowProvider';
 import { useWindows } from '../hooks/useWindows';
 import Desktop from '../components/game/Desktop';
@@ -18,8 +16,6 @@ function WindowLayer() {
 }
 
 export default function Game() {
-  const [blackBg, setBlackBg] = useState(false); // dev only
-
   return (
     <>
       {/* Narrow screens (under 1024px = Tailwind "lg") see only this message */}
@@ -29,8 +25,7 @@ export default function Game() {
 
       <WindowProvider>
         <main
-          className="relative hidden h-screen overflow-hidden bg-cover bg-center lg:block"
-          style={blackBg ? { backgroundColor: '#000' } : { backgroundImage: `url(${bg})`}}
+          className="relative hidden h-screen overflow-hidden bg-black lg:block"
         >
           {/* Green frame from the menu */}
           <div aria-hidden="true" className="pointer-events-none absolute inset-6 z-0 border-2 border-green-500/45 shadow-[inset_0_0_24px_#22C55E]" />
@@ -38,20 +33,6 @@ export default function Game() {
           <Desktop />
           <WindowLayer />
           <Taskbar />
-
-          {/* TEMPORARY dev button: not rendered in production builds */}
-          {import.meta.env.DEV && (
-            <div className="absolute right-10 top-10 z-40 flex items-center gap-2 text-xs text-green-600">
-              <span>dev: background</span>
-              <button
-                type="button"
-                onClick={() => setBlackBg((b) => !b)}
-                className="rounded border border-green-700 px-2 py-1 hover:border-green-400"
-              >
-                {blackBg ? 'menu image' : 'black'}
-              </button>
-            </div>
-          )}
 
           {/* Scanlines (same as the menu), on top of everything but not clickable */}
           <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-50" style={{ background: 'repeating-linear-gradient(0deg, rgba(0,0,0,0.28) 0px, rgba(0,0,0,0.28) 2px, transparent 2px, transparent 4px)' }} />
