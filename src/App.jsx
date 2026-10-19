@@ -1,5 +1,4 @@
-import { Link } from 'react-router';
-import { usePWA } from './hooks/usePWA';
+import { Link } from "react-router";
 import bg from './assets/home-page.png';
 import FloatingBinary from './components/FloatingBinary';
 
@@ -27,8 +26,6 @@ function MenuLink({ to, children }) {
 }
 
 export default function App() {
-  const { isInstallable, installApp, isOnline } = usePWA();
-
   return (
     <main className="relative min-h-screen overflow-hidden flex flex-col items-center justify-center bg-cover bg-center"
           style={{ backgroundImage: `url(${bg})` }}>
