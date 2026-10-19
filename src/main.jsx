@@ -3,6 +3,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Routes, Route } from 'react-router';
 import App from './App';
+import Game from './pages/Game'
 import Register from './pages/Register';
 import Login from './pages/Login';
 import Menu from './pages/Menu';
@@ -13,6 +14,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Skip><App /></Skip>} />
+        <Route path="/game" element={<Skip><Game/></Skip>} />
         <Route path="/register" element={<Skip><Register /></Skip>} />
         <Route path="/login" element={<Skip><Login /></Skip>} />
         <Route path="/menu" element={<Menu />} />
