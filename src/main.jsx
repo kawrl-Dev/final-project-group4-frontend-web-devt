@@ -11,6 +11,9 @@ import Load from './pages/Load';
 import Leaderboard from './pages/Leaderboard'
 import AuthProvider from './context/AuthProvider';
 import { MOCK_USERS } from './context/AuthContext';
+import { applySettings } from './lib/settings';
+
+applySettings();
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

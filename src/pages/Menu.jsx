@@ -3,11 +3,11 @@ import { Link, Navigate, useNavigate } from 'react-router';
 import { authFetch, clearToken, getToken } from '../lib/auth';
 import FloatingBinary from '../components/FloatingBinary';
 import bg from '../assets/home-page.png';
+import Settings from '../components/Settings';
 
 const items = [
     { label: 'New Game', to: '/game' },
     { label: 'Load Game', to: '/load' },
-    { label: 'Settings', to: '/settings'},
     { label: 'Leaderboard', to: '/leaderboard'},
 ];
 
@@ -35,6 +35,7 @@ function Arrow() {
 export default function Menu() {
     const navigate = useNavigate();
     const dialogRef = useRef(null);
+    const [settingsOpen, setSettingsOpen] = useState(false);
     const [status, setStatus] = useState(() => (getToken() ? 'checking' : 'unauth'));
 
     const verify = useCallback(async (signal) => {
@@ -126,6 +127,14 @@ export default function Menu() {
                         ))}
 
                         <button
+                            onClick={() => setSettingsOpen(true)}
+                            style={linkGlow}
+                            className="group relative font-pixel text-brand-spring leading-[1.1] text-[clamp(1.5rem,4vw,3.5rem)] hover:text-white focus-visible:text-white focus-visible:outline-none">
+                                <Arrow />
+                                Settings
+                            </button>
+
+                        <button
                             onClick={() => dialogRef.current?.showModal()}
                             style={linkGlow}
                             className="group relative font-pixel text-brand-spring leading-[1.1] text-[clamp(1.5rem,4vw,3.5rem)] hover:text-white focus-visible:text-white focus-visible:outline-none">
@@ -157,6 +166,7 @@ export default function Menu() {
                             </button>
                         </div>
                     </dialog>
+                    <Settings open={settingsOpen} onClose={() => setSettingsOpen(false)} />
                 </>
             )}
 
