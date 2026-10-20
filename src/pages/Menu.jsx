@@ -5,6 +5,7 @@ import { authFetch, clearToken, getToken } from '../lib/auth';
 import FloatingBinary from '../components/FloatingBinary';
 import bg from '../assets/home-page.png';
 import Settings from '../components/Settings';
+import Spinner from '../components/Spinner';
 
 const items = [
     { label: 'New Game', to: '/game' },
@@ -89,11 +90,7 @@ export default function Menu() {
             <FloatingBinary />
             <div aria-hidden="true" className="pointer-events-none absolute inset-6 border-2 border-brand-spring/45 shadow-[inset_0_0_24px_#00ED64]"/>
 
-            {status === 'checking' && (
-                <p role="status" className="relative z-10 font-pixel text-xl text-brand-spring">
-                    Loading...
-                </p>
-            )}
+            {status === 'checking' && <Spinner className="relative z-10"/>}
 
             {status === 'error' && (
                 <div className="relative z-10 flex flex-col items-center gap-4 text-center">
