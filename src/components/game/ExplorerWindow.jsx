@@ -9,8 +9,8 @@ import Window95, { RAISED, SUNKEN } from './Window95';
 
 const RETRY_SECONDS = 5;
 
-function pickIcon(child) {
-  if (child.locked) return <LockIcon />;
+function pickIcon(child, locked) {
+  if (locked) return <LockIcon />;
   return child.type === 'folder' ? <FolderIcon /> : <DocumentIcon />;
 }
 
@@ -42,7 +42,7 @@ function RetryButton({ onRetry }) {
 const ROOT = { slug: 'root', name: 'C:' };
 
 export default function ExplorerWindow({ onClose }) {
-  const { dispatch } = useWindows();
+  const { state, dispatch } = useWindows();
 
   // "stack" is the trail we walked through, e.g. [root, users, guest.bson].
   // The LAST entry is what we are looking at (a folder or a document).
@@ -61,6 +61,11 @@ export default function ExplorerWindow({ onClose }) {
 
   const { item, loading, error, waking, refetch } = useItem(current.slug);
 
+  // A folder listing from the server marks every lock as locked. After a Load
+  // (or a solve) the player has already opened some of them, so the list of
+  // solved slugs in WindowProvider overrides what the listing says.
+  const isLocked = (child) => child.locked && !state.solved.includes(child.slug);
+
   // Opening a document counts as "read". This runs only after the file has
   // loaded successfully (item exists), never on double-click or on failure.
   // MARK_READ ignores duplicates, so running twice (StrictMode) is harmless.
@@ -72,7 +77,7 @@ export default function ExplorerWindow({ onClose }) {
 
   const handleOpen = (child) => {
     // Locked items show the lock prompt. Unlocked folders AND files open.
-    if (child.locked) {
+    if (isLocked(child)) {
       setLockTarget({ slug: child.slug, name: child.name, type: child.type });
       return;
     }
@@ -80,8 +85,9 @@ export default function ExplorerWindow({ onClose }) {
   };
 
   // Correct answer: remember the unlocked item, flip the lock icon in this
-  // folder's cached listing, and go back to the folder. The folder re-renders
-  // from the cache, so the icon turns into a normal folder/document.
+  // folder's cached listing, record the solve (so Save can store it), and go
+  // back to the folder. The folder re-renders from the cache, so the icon
+  // turns into a normal folder/document.
   const handleSolved = (unlockedItem) => {
     setCachedItem(lockTarget.slug, unlockedItem);
     if (item?.children) {
@@ -92,6 +98,7 @@ export default function ExplorerWindow({ onClose }) {
         ),
       });
     }
+    dispatch({ type: 'SOLVE', slug: lockTarget.slug });
     setLockTarget(null);
   };
 
@@ -165,19 +172,22 @@ export default function ExplorerWindow({ onClose }) {
             )}
             {item && !isFile && item.children && (
               <ul className="flex flex-wrap gap-4">
-                {item.children.map((child) => (
-                  <li key={child.slug}>
-                    <div
-                      onDoubleClick={() => handleOpen(child)}
-                      className="flex w-24 cursor-default select-none flex-col items-center gap-1 p-1 text-center hover:bg-green-500/10"
-                    >
-                      <span className="h-10 w-10">{pickIcon(child)}</span>
-                      <span className={`wrap-break-word text-sm ${child.locked ? 'text-green-700' : ''}`}>
-                        {child.name}
-                      </span>
-                    </div>
-                  </li>
-                ))}
+                {item.children.map((child) => {
+                  const locked = isLocked(child);
+                  return (
+                    <li key={child.slug}>
+                      <div
+                        onDoubleClick={() => handleOpen(child)}
+                        className="flex w-24 cursor-default select-none flex-col items-center gap-1 p-1 text-center hover:bg-green-500/10"
+                      >
+                        <span className="h-10 w-10">{pickIcon(child, locked)}</span>
+                        <span className={`wrap-break-word text-sm ${locked ? 'text-green-700' : ''}`}>
+                          {child.name}
+                        </span>
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </>

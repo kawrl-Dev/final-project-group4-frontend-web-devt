@@ -4,13 +4,18 @@ import { VscChromeClose, VscChromeMaximize, VscChromeMinimize } from 'react-icon
 export const RAISED = 'border-2 border-t-white border-l-white border-b-gray-700 border-r-gray-700';
 export const SUNKEN = 'border-2 border-t-gray-700 border-l-gray-700 border-b-white border-r-white';
 
+// Up to 960x640, but never taller/wider than the screen minus room for the
+// taskbar and frame (underscores become spaces inside calc). Explorer and
+// Clues share it. Pass `size` to use a different one (the pause menu does).
+const DEFAULT_SIZE = 'h-[min(40rem,calc(100vh_-_10rem))] w-[min(60rem,calc(100vw_-_8rem))]';
+
 // A fixed (not draggable) window frame. Only X works.
-export default function Window95({ title, onClose, children }) {
+export default function Window95({ title, onClose, size = DEFAULT_SIZE, children }) {
   return (
     <div
       role="dialog"
       aria-label={title}
-      className={`absolute left-1/2 top-[45%] z-20 flex h-105 w-170 -translate-x-1/2 -translate-y-1/2 flex-col bg-gray-300 p-0.5 font-pixel ${RAISED}`}
+      className={`absolute left-1/2 top-[45%] z-20 flex ${size} -translate-x-1/2 -translate-y-1/2 flex-col bg-gray-300 p-0.5 font-pixel ${RAISED}`}
     >
       <div className="flex items-center justify-between bg-green-900 px-1 py-0.5 text-green-100">
         <span className="truncate text-sm">{title}</span>

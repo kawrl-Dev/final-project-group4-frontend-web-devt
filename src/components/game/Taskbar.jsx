@@ -4,6 +4,9 @@ import { RAISED, SUNKEN } from './Window95';
 
 const pad = (n) => String(n).padStart(2, '0');
 
+// Placeholder until the scoring slice exists.
+const SCORE = 0;
+
 export default function Taskbar() {
   const { state } = useWindows();
   const [seconds, setSeconds] = useState(0);
@@ -25,7 +28,17 @@ export default function Taskbar() {
           </span>
         )}
       </div>
-      <span className={`px-3 py-1 text-sm ${SUNKEN}`}>Score: 0</span>
+      {/* Black readout with big green digits, like the address bar in the explorer */}
+      <span
+        role="status"
+        aria-label={`Score ${SCORE}`}
+        className={`flex items-center gap-2 bg-black px-3 py-0.5 ${SUNKEN}`}
+      >
+        <span aria-hidden="true" className="text-sm text-green-300">Score</span>
+        <span aria-hidden="true" className="min-w-[4ch] text-right text-xl font-bold leading-none tabular-nums text-green-400">
+          {SCORE}
+        </span>
+      </span>
       <span className={`px-3 py-1 text-sm tabular-nums ${SUNKEN}`}>{time}</span>
     </div>
   );
