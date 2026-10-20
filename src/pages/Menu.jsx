@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { clearItemCache } from '../hooks/useItem';
 import { Link, Navigate, useNavigate } from 'react-router';
 import { authFetch, clearToken, getToken } from '../lib/auth';
 import FloatingBinary from '../components/FloatingBinary';
@@ -76,6 +77,7 @@ export default function Menu() {
 
     const handleLogout = () => {
         clearToken();
+        clearItemCache();
         navigate('/', { replace: true });
     };
 
