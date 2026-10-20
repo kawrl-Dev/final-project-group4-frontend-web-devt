@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { VscArrowLeft } from 'react-icons/vsc';
-import { useItem } from '../../hooks/useItem';
+import { setCachedItem, useItem } from '../../hooks/useItem';
 import { useWindows } from '../../hooks/useWindows';
 import { DocumentIcon, FolderIcon, LockIcon } from './PixelIcons';
 import BsonView from './BsonView';
+import LockPrompt from './LockPrompt';
 import Window95, { RAISED, SUNKEN } from './Window95';
 
 const RETRY_SECONDS = 5;
@@ -49,9 +50,14 @@ export default function ExplorerWindow({ onClose }) {
   const [stack, setStack] = useState([ROOT]);
   const current = stack[stack.length - 1];
 
+  // The locked child the player double-clicked ({ slug, name, type }), or null.
+  // While set, the lock prompt replaces the folder contents.
+  const [lockTarget, setLockTarget] = useState(null);
+
   // The API does not return the path, so we build it from the stack.
   // [root, users, guest.bson] -> "C:\users\guest.bson"
-  const path = ['C:', ...stack.slice(1).map((f) => f.name)].join('\\');
+  const folderPath = ['C:', ...stack.slice(1).map((f) => f.name)].join('\\');
+  const path = lockTarget ? `${folderPath}\\${lockTarget.name}` : folderPath;
 
   const { item, loading, error, waking, refetch } = useItem(current.slug);
 
@@ -65,12 +71,38 @@ export default function ExplorerWindow({ onClose }) {
   }, [item, dispatch]);
 
   const handleOpen = (child) => {
-    // Locked items do nothing until slice 4. Unlocked folders AND files open.
-    if (child.locked) return;
+    // Locked items show the lock prompt. Unlocked folders AND files open.
+    if (child.locked) {
+      setLockTarget({ slug: child.slug, name: child.name, type: child.type });
+      return;
+    }
     setStack((s) => [...s, { slug: child.slug, name: child.name }]);
   };
 
-  const handleBack = () => setStack((s) => (s.length > 1 ? s.slice(0, -1) : s));
+  // Correct answer: remember the unlocked item, flip the lock icon in this
+  // folder's cached listing, and go back to the folder. The folder re-renders
+  // from the cache, so the icon turns into a normal folder/document.
+  const handleSolved = (unlockedItem) => {
+    setCachedItem(lockTarget.slug, unlockedItem);
+    if (item?.children) {
+      setCachedItem(current.slug, {
+        ...item,
+        children: item.children.map((c) =>
+          c.slug === lockTarget.slug ? { ...c, locked: false } : c
+        ),
+      });
+    }
+    setLockTarget(null);
+  };
+
+  // Back first closes the lock prompt, then walks up the folder trail.
+  const handleBack = () => {
+    if (lockTarget) {
+      setLockTarget(null);
+      return;
+    }
+    setStack((s) => (s.length > 1 ? s.slice(0, -1) : s));
+  };
 
   const atRoot = stack.length === 1;
   const isFile = item?.type === 'file';
@@ -82,9 +114,9 @@ export default function ExplorerWindow({ onClose }) {
         <button
           type="button"
           onClick={handleBack}
-          disabled={atRoot}
+          disabled={atRoot && !lockTarget}
           className={`flex items-center gap-1 bg-gray-300 px-2 py-0.5 ${RAISED} ${
-            atRoot ? 'cursor-not-allowed text-gray-500' : 'cursor-pointer active:border-t-gray-700 active:border-l-gray-700 active:border-b-white active:border-r-white'
+            atRoot && !lockTarget ? 'cursor-not-allowed text-gray-500' : 'cursor-pointer active:border-t-gray-700 active:border-l-gray-700 active:border-b-white active:border-r-white'
           }`}
         >
           <VscArrowLeft size={12} aria-hidden="true" />
@@ -103,41 +135,52 @@ export default function ExplorerWindow({ onClose }) {
 
       {/* Black file area with green text. Courier Prime = the default font-sans */}
       <div className={`min-h-0 flex-1 overflow-auto bg-black p-3 font-sans text-green-400 ${SUNKEN}`}>
-        {loading && (
-          <p role="status" className="animate-pulse">
-            {waking ? 'waking the server...' : 'loading...'}
-          </p>
-        )}
-        {error && (
-          <div role="alert">
-            <p className="text-red-400">Could not read {path}</p>
-            <RetryButton onRetry={refetch} />
-          </div>
-        )}
+        {lockTarget ? (
+          <LockPrompt
+            key={lockTarget.slug}
+            target={lockTarget}
+            onSolved={handleSolved}
+            onCancel={() => setLockTarget(null)}
+          />
+        ) : (
+          <>
+            {loading && (
+              <p role="status" className="animate-pulse">
+                {waking ? 'waking the server...' : 'loading...'}
+              </p>
+            )}
+            {error && (
+              <div role="alert">
+                <p className="text-red-400">Could not read {path}</p>
+                <RetryButton onRetry={refetch} />
+              </div>
+            )}
 
-        {/* Document view */}
-        {isFile && item.document && <BsonView document={item.document} />}
+            {/* Document view */}
+            {isFile && item.document && <BsonView document={item.document} />}
 
-        {/* Folder view */}
-        {item && !isFile && item.children?.length === 0 && (
-          <p className="text-green-700">This folder is empty.</p>
-        )}
-        {item && !isFile && item.children && (
-          <ul className="flex flex-wrap gap-4">
-            {item.children.map((child) => (
-              <li key={child.slug}>
-                <div
-                  onDoubleClick={() => handleOpen(child)}
-                  className="flex w-24 cursor-default select-none flex-col items-center gap-1 p-1 text-center hover:bg-green-500/10"
-                >
-                  <span className="h-10 w-10">{pickIcon(child)}</span>
-                  <span className={`wrap-break-word text-sm ${child.locked ? 'text-green-700' : ''}`}>
-                    {child.name}
-                  </span>
-                </div>
-              </li>
-            ))}
-          </ul>
+            {/* Folder view */}
+            {item && !isFile && item.children?.length === 0 && (
+              <p className="text-green-700">This folder is empty.</p>
+            )}
+            {item && !isFile && item.children && (
+              <ul className="flex flex-wrap gap-4">
+                {item.children.map((child) => (
+                  <li key={child.slug}>
+                    <div
+                      onDoubleClick={() => handleOpen(child)}
+                      className="flex w-24 cursor-default select-none flex-col items-center gap-1 p-1 text-center hover:bg-green-500/10"
+                    >
+                      <span className="h-10 w-10">{pickIcon(child)}</span>
+                      <span className={`wrap-break-word text-sm ${child.locked ? 'text-green-700' : ''}`}>
+                        {child.name}
+                      </span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </>
         )}
       </div>
     </Window95>
