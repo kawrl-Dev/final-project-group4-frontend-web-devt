@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { saveToken } from '../lib/auth';
 import { API_BASE } from '../lib/config';   // add
@@ -18,6 +18,8 @@ export default function Register() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const dialogRef = useRef(null);
+  const tokenRef = useRef('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -61,8 +63,9 @@ export default function Register() {
       } else if (typeof data.token !== 'string' || !data.token) {
         setError('Registration failed');
       } else {
-        saveToken(data.token);
-        navigate('/menu', { replace: true});
+        tokenRef.current = data.token;
+        setPassword('');
+        dialogRef.current?.showModal();
         return;
       }
     } catch {
@@ -71,6 +74,13 @@ export default function Register() {
       setLoading(false);
       setShowPassword(false);
     }
+  };
+
+  const handleContinue = () => {
+    if (!tokenRef.current) return;
+    saveToken(tokenRef.current);
+    tokenRef.current = '';
+    navigate('/menu', { replace: true });
   };
 
   return (
@@ -172,6 +182,22 @@ export default function Register() {
             </Link>
           </form>
         </section>
+
+        <dialog 
+          ref={dialogRef}
+          aria-labelledby="created-title"
+          onClose={handleContinue}
+          className="m-auto w-[min(90vw,28rem)] border-2 border-brand-spring bg-brand-evergreen p-[clamp(1.25rem,3vw,2rem)] text-white shadow-[8px_8px_0_0_#00684A] backdrop:bg-black/70">
+            <h2 id="created-title" className="font-pixel font-normal text-white text-[clamp(1.5rem,3vw,2rem)]">
+              Account created!
+            </h2>
+            <p className="mt-2 text-white/80 text-[clamp(0.875rem,1.3vw,1rem)]">
+              Your account is ready. You can log in with your username and password any time.
+            </p>
+            <button autoFocus onClick={() => dialogRef.current?.close()} className={`${buttonClass} mt-6 w-full`}>
+              Continue
+            </button>
+        </dialog>
     </main>
   );
 }

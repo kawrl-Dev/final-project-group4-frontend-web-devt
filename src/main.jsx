@@ -10,7 +10,7 @@ import Load from './pages/Load'
 import Login from './pages/Login';
 import Menu from './pages/Menu';
 import Skip from './components/Skip';
-import Leaderboard from './pages/Leaderboard';
+import Leaderboard from './pages/Leaderboard'
 import AuthProvider from './context/AuthProvider';
 import { MOCK_USERS } from './context/AuthContext';
 
