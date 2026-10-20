@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { clearItemCache } from '../hooks/useItem';
 import { Link, Navigate, useNavigate } from 'react-router';
 import { authFetch, clearToken, getToken } from '../lib/auth';
 import FloatingBinary from '../components/FloatingBinary';
@@ -8,7 +9,7 @@ const items = [
     { label: 'New Game', to: '/game' },
     { label: 'Load Game', to: '/load' },
     { label: 'Settings', to: '/settings'},
-    { label: 'Leaderboard', to: '/leaderboard'},
+    { label: 'Leaderboard', to: '/leaderboard'}
 ];
 
 const glow = {
@@ -75,6 +76,7 @@ export default function Menu() {
 
     const handleLogout = () => {
         clearToken();
+        clearItemCache();
         navigate('/', { replace: true });
     };
 
