@@ -5,14 +5,17 @@ import { useWindows } from '../hooks/useWindows';
 import Desktop from '../components/game/Desktop';
 import ExplorerWindow from '../components/game/ExplorerWindow';
 import Taskbar from '../components/game/Taskbar';
+import CluesWindow from '../components/game/CluesWindow';
 
 const glow = { textShadow: '0 0 0.05em #22C55E, 0 0 0.2em #22C55E, 0 0 0.45em #15803D' };
 
-// Decides which window to draw based on the reducer state.
 function WindowLayer() {
   const { state, dispatch } = useWindows();
   if (state.openWindow?.id === 'explorer') {
     return <ExplorerWindow onClose={() => dispatch({ type: 'CLOSE' })} />;
+  }
+  if (state.openWindow?.id === 'clues') {
+    return <CluesWindow onClose={() => dispatch({ type: 'CLOSE' })} />;
   }
   return null;
 }

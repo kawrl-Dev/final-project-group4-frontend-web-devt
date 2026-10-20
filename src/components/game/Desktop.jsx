@@ -8,7 +8,7 @@ export default function Desktop() {
 
   // Only icons with an `opens` value do anything.
   const handleOpen = (icon) => {
-    if (icon.opens === 'explorer') dispatch({ type: 'OPEN', id: 'explorer', title: 'C:\\' });
+    if (icon.opens) dispatch({ type: 'OPEN', id: icon.opens, title: icon.windowTitle });
   };
 
   return (
