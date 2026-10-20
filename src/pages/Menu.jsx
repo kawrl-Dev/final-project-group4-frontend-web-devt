@@ -9,6 +9,7 @@ const items = [
     { label: 'New Game', to: '/game' },
     { label: 'Load Game', to: '/load' },
     { label: 'Settings', to: '/settings'},
+    { label: 'Leaderboard', to: '/leaderboard'}
 ];
 
 const glow = {
