@@ -1,10 +1,11 @@
-import { Link } from 'react-router';
+import { Link } from "react-router";
 import bg from './assets/home-page.png';
+import FloatingBinary from './components/FloatingBinary';
 
 const glow = { textShadow: '0 0 0.05em #22C55E, 0 0 0.2em #22C55E, 0 0 0.45em #15803D', };
 const linkGlow = { textShadow: '0 0 0.2em #16A34A' };
 
-function MenuLink({ to, children}) {
+function MenuLink({ to, children }) {
   return (
     <Link
       to={to}
@@ -28,6 +29,7 @@ export default function App() {
   return (
     <main className="relative min-h-screen overflow-hidden flex flex-col items-center justify-center bg-cover bg-center"
           style={{ backgroundImage: `url(${bg})` }}>
+          <FloatingBinary />
 
           <div aria-hidden="true" className="pointer-events-none absolute inset-6 border-2 border-green-500/45 shadow-[inset_0_0_24px_#22C55E]"/>
           <h1 className="relative z-10 text-center font-title font-normal leading-[1.1] text-green-100 text-[clamp(3rem,13vw,14rem)]"
@@ -35,7 +37,6 @@ export default function App() {
           <nav className="relative z-10 mt-[2.5vw] flex flex-col items-center gap-1">
             <MenuLink to="/register">Register</MenuLink>
             <MenuLink to="/login">Log In</MenuLink>
-            <MenuLink to="/leaderboard">Leaderboard</MenuLink>
           </nav>
           <p className="absolute inset-x-0 bottom-11 z-10 flex items-center justify-center gap-2 font-pixel text-[clamp(0.875rem,1.5vw,1.375rem)] text-green-300">
             <svg

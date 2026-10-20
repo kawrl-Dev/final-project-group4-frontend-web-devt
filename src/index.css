@@ -4,6 +4,11 @@
     --font-sans: "Courier Prime", "Courier New", Courier, monospace;
     --font-title: "Lunar Escape", "Pixelify Sans", monospace;
     --font-pixel: "Pixelify Sans", "Courier New", Courier, monospace;
+    
+    --color-brand-spring: #00ED64;
+    --color-brand-forest: #00684A;
+    --color-brand-evergreen: #023430;
+    --color-brand-slate: #001E2B;
 }
 
 @font-face {
@@ -12,4 +17,19 @@
     font-weight: 400;
     font-style: normal;
     font-display: swap;
+}
+
+@keyframes binary-float {
+    from { transform: translate3d(0, 0, 0); }
+    to { transform: translate3d(0, -50%, 0); }
+}
+
+.binary-col {
+    animation: binary-float linear infinite;
+    will-change: transform;
+}
+
+.binary-mask {
+    -webkit-mask-image: linear-gradient(to bottom, transparent, #000 15%, #000 85%, transparent);
+    mask-image: linear-gradient(to bottom, transparent #000 15%, #000 85%, transparent);
 }
