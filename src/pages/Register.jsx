@@ -183,20 +183,20 @@ export default function Register() {
         </section>
 
         <dialog 
-            ref={dialogRef}
-            aria-labelledby="created-title"
-            onClose={handleContinue}
-            className="m-auto w-[min(90vw,28rem)] border-2 border-brand-spring bg-brand-evergreen p-[clamp(1.25rem,3vw,2rem)] text-white shadow-[8px_8px_0_0_#00684A] backdrop:bg-black/70">
-              <h2 id="created-title" className="font-pixel font-normal text-white text-[clamp(1.5rem,3vw,2rem)]">
-                Account created!
-              </h2>
-              <p className="mt-2 text-white/80 text-[clamp(0.875rem,1.3vw,1rem)]">
-                Your account is ready. You can log in with your username and password any time.
-              </p>
-              <button autoFocus onClick={() => dialogRef.current?.close()} className={`${buttonClass} mt-6 w-full`}>
-                Continue
-              </button>
-            </dialog>
+          ref={dialogRef}
+          aria-labelledby="created-title"
+          onClose={handleContinue}
+          className="m-auto w-[min(90vw,28rem)] border-2 border-brand-spring bg-brand-evergreen p-[clamp(1.25rem,3vw,2rem)] text-white shadow-[8px_8px_0_0_#00684A] backdrop:bg-black/70">
+            <h2 id="created-title" className="font-pixel font-normal text-white text-[clamp(1.5rem,3vw,2rem)]">
+              Account created!
+            </h2>
+            <p className="mt-2 text-white/80 text-[clamp(0.875rem,1.3vw,1rem)]">
+              Your account is ready. You can log in with your username and password any time.
+            </p>
+            <button autoFocus onClick={() => dialogRef.current?.close()} className={`${buttonClass} mt-6 w-full`}>
+              Continue
+            </button>
+        </dialog>
     </main>
   );
 }
