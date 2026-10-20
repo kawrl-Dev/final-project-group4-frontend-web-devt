@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router';
 import { clearItemCache, setCachedItem } from '../../hooks/useItem';
 import { useWindows } from '../../hooks/useWindows';
 import { deleteSave, getSave, putSave } from '../../services/saveService';
@@ -45,12 +46,14 @@ function describe(info) {
  */
 export default function PauseMenu() {
   const { state, dispatch } = useWindows();
+  const navigate = useNavigate();
 
   // status: 'checking' | 'none' | 'exists' | 'error'
   const [info, setInfo] = useState({ status: 'checking', updatedAt: null });
-  const [confirm, setConfirm] = useState(null); // null | 'save' | 'load' | 'delete'
+  const [confirm, setConfirm] = useState(null); // null | 'save' | 'load' | 'delete' | 'menu'
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState(null); // { kind: 'ok' | 'error', text }
+
   const controllerRef = useRef(null);
   const resumeRef = useRef(null);
 
@@ -149,6 +152,19 @@ export default function PauseMenu() {
       setMessage({ kind: 'ok', text: 'Save deleted.' });
     });
 
+  const leave = () => navigate('/menu', { replace: true });
+
+  // Save first. If the save fails, run() shows the error and we stay here,
+  // so the player never leaves believing their progress was stored.
+  const saveAndExit = () =>
+    run(async (signal) => {
+      await putSave(
+        { solved: state.solved, readDocuments: state.readDocuments.map((d) => d.slug) },
+        signal
+      );
+      navigate('/menu', { replace: true });
+    });
+
   const checking = info.status === 'checking';
   const noSave = info.status === 'none';
 
@@ -169,6 +185,12 @@ export default function PauseMenu() {
       text: 'Delete your save? This cannot be undone.',
       label: 'Delete',
       action: remove,
+    },
+    menu: {
+      text: 'Leave without saving? Unsaved progress will be lost.',
+      label: 'Leave',
+      action: leave,
+      secondary: { label: 'Save & Exit', action: saveAndExit },
     },
   }[confirm];
 
@@ -198,6 +220,11 @@ export default function PauseMenu() {
             <div className="flex flex-col gap-3">
               <p className="text-sm">{confirmInfo.text}</p>
               <div className="flex gap-2">
+                {confirmInfo.secondary && (
+                  <button type="button" onClick={confirmInfo.secondary.action} className={buttonClass}>
+                    {confirmInfo.secondary.label}
+                  </button>
+                )}
                 <button type="button" onClick={confirmInfo.action} className={buttonClass}>
                   {confirmInfo.label}
                 </button>
@@ -234,6 +261,14 @@ export default function PauseMenu() {
                 className={buttonClass}
               >
                 Delete save
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => setConfirm('menu')}
+                className={buttonClass}
+              >
+                Main Menu
               </button>
             </div>
           )}
