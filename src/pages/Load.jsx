@@ -5,7 +5,7 @@ import FloatingBinary from '../components/FloatingBinary';
 import bg from '../assets/home-page.png';
 
 const SAVE_URL = '/api/saves/me';
-const PLAY_ROUTE = '/new';
+const PLAY_ROUTE = '/game';
 
 const glow = {textShadow: '0 0 0.5em #00ED64, 0 0 0.2em #00ED64, 0 0 0.2em #00ED64, 0 0 0.45em #00684A',};
 const buttonClass = 'border-2 border-brand-spring bg-brand-spring py-[0.6em] text-brand-slate text-[clamp(1rem,1.8vw,1.25rem)] hover:bg-transparent hover:text-brand-spring focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:cursor-not-allowed disabled:opacity-50';
