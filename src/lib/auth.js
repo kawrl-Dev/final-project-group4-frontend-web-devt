@@ -1,3 +1,5 @@
+import {API_BASE} from './config'
+
 const KEY = 'minosdb_token';
 
 export const getToken = () => localStorage.getItem(KEY);
@@ -6,7 +8,7 @@ export const clearToken = () => localStorage.removeItem(KEY);
 
 export function authFetch(url, options = {}) {
     const token = getToken();
-    return fetch(url, {
+    return fetch(API_BASE + url, {
         ...options,
         cache: 'no-store',
         headers: {

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { saveToken } from '../lib/auth';
+import { API_BASE } from '../lib/config';
 import FloatingBinary from '../components/FloatingBinary';
 import bg from '../assets/home-page.png';
 
@@ -32,7 +33,7 @@ export default function Login() {
         setLoading(true);
 
         try {
-            const res = await fetch('/api/auth/login', {
+            const res = await fetch(`${API_BASE}/api/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type' : 'application/json' },
                 body: JSON.stringify({ username: username.trim(), password }),

@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+import { clearItemCache } from '../hooks/useItem';
 import WindowProvider from '../context/WindowProvider';
 import { useWindows } from '../hooks/useWindows';
 import Desktop from '../components/game/Desktop';
@@ -16,6 +18,7 @@ function WindowLayer() {
 }
 
 export default function Game() {
+  useEffect(() => clearItemCache, []);
   return (
     <>
       {/* Narrow screens (under 1024px = Tailwind "lg") see only this message */}
