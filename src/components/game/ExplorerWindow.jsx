@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { VscArrowLeft } from 'react-icons/vsc';
 import { useItem } from '../../hooks/useItem';
+import { useWindows } from '../../hooks/useWindows';
 import { DocumentIcon, FolderIcon, LockIcon } from './PixelIcons';
+import BsonView from './BsonView';
 import Window95, { RAISED, SUNKEN } from './Window95';
 
 const RETRY_SECONDS = 5;
@@ -39,27 +41,39 @@ function RetryButton({ onRetry }) {
 const ROOT = { slug: 'root', name: 'C:' };
 
 export default function ExplorerWindow({ onClose }) {
-  // "stack" is the trail of folders we walked through, e.g. [root, users].
-  // The LAST one is the folder we are looking at. Going Back = remove the last one.
+  const { dispatch } = useWindows();
+
+  // "stack" is the trail we walked through, e.g. [root, users, guest.bson].
+  // The LAST entry is what we are looking at (a folder or a document).
+  // Going Back = remove the last one.
   const [stack, setStack] = useState([ROOT]);
   const current = stack[stack.length - 1];
 
   // The API does not return the path, so we build it from the stack.
-  // [root, users] -> "C:\users"
+  // [root, users, guest.bson] -> "C:\users\guest.bson"
   const path = ['C:', ...stack.slice(1).map((f) => f.name)].join('\\');
 
   const { item, loading, error, waking, refetch } = useItem(current.slug);
 
+  // Opening a document counts as "read". This runs only after the file has
+  // loaded successfully (item exists), never on double-click or on failure.
+  // MARK_READ ignores duplicates, so running twice (StrictMode) is harmless.
+  useEffect(() => {
+    if (item && item.type === 'file' && !item.locked) {
+      dispatch({ type: 'MARK_READ', slug: item.slug, name: item.name });
+    }
+  }, [item, dispatch]);
+
   const handleOpen = (child) => {
-    // Slice 2: only unlocked folders open. Locked items (slice 4) and
-    // documents (slice 3) do nothing yet.
-    if (child.locked || child.type !== 'folder') return;
+    // Locked items do nothing until slice 4. Unlocked folders AND files open.
+    if (child.locked) return;
     setStack((s) => [...s, { slug: child.slug, name: child.name }]);
   };
 
   const handleBack = () => setStack((s) => (s.length > 1 ? s.slice(0, -1) : s));
 
   const atRoot = stack.length === 1;
+  const isFile = item?.type === 'file';
 
   return (
     <Window95 title="C:\" onClose={onClose}>
@@ -100,29 +114,29 @@ export default function ExplorerWindow({ onClose }) {
             <RetryButton onRetry={refetch} />
           </div>
         )}
-        {item && item.children?.length === 0 && <p className="text-green-700">This folder is empty.</p>}
-        {item && item.children && (
+
+        {/* Document view */}
+        {isFile && item.document && <BsonView document={item.document} />}
+
+        {/* Folder view */}
+        {item && !isFile && item.children?.length === 0 && (
+          <p className="text-green-700">This folder is empty.</p>
+        )}
+        {item && !isFile && item.children && (
           <ul className="flex flex-wrap gap-4">
-            {item.children.map((child) => {
-              const isDocument = !child.locked && child.type !== 'folder';
-              return (
-                <li key={child.slug}>
-                  <div
-                    onDoubleClick={() => handleOpen(child)}
-                    // Documents cannot be opened until slice 3, so show that
-                    title={isDocument ? 'Cannot be opened yet' : undefined}
-                    className={`flex w-24 select-none flex-col items-center gap-1 p-1 text-center hover:bg-green-500/10 ${
-                      isDocument ? 'cursor-not-allowed' : 'cursor-default'
-                    }`}
-                  >
-                    <span className="h-10 w-10">{pickIcon(child)}</span>
-                    <span className={`wrap-break-word text-sm ${child.locked || isDocument ? 'text-green-700' : ''}`}>
-                      {child.name}
-                    </span>
-                  </div>
-                </li>
-              );
-            })}
+            {item.children.map((child) => (
+              <li key={child.slug}>
+                <div
+                  onDoubleClick={() => handleOpen(child)}
+                  className="flex w-24 cursor-default select-none flex-col items-center gap-1 p-1 text-center hover:bg-green-500/10"
+                >
+                  <span className="h-10 w-10">{pickIcon(child)}</span>
+                  <span className={`wrap-break-word text-sm ${child.locked ? 'text-green-700' : ''}`}>
+                    {child.name}
+                  </span>
+                </div>
+              </li>
+            ))}
           </ul>
         )}
       </div>

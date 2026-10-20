@@ -1,16 +1,26 @@
 import { useReducer } from 'react';
 import { WindowContext } from './WindowContext';
 
-// Only ONE window can be open, so state is just "which one" (or null).
-const initialState = { openWindow: null };
+// Only ONE window can be open. readDocuments remembers every document the
+// player has opened (used by the Clues icon in slice 5). It lives here, not
+// in the window, so closing the explorer does not erase it.
+const initialState = { openWindow: null, readDocuments: [] };
 
 function reducer(state, action) {
   switch (action.type) {
     case 'OPEN':
       // Opening a window replaces whatever was open.
-      return { openWindow: { id: action.id, title: action.title } };
+      return { ...state, openWindow: { id: action.id, title: action.title } };
     case 'CLOSE':
-      return { openWindow: null };
+      return { ...state, openWindow: null };
+    case 'MARK_READ':
+      // Ignore duplicates. Returning the same state object also skips a re-render,
+      // so StrictMode's double-run is harmless.
+      if (state.readDocuments.some((d) => d.slug === action.slug)) return state;
+      return {
+        ...state,
+        readDocuments: [...state.readDocuments, { slug: action.slug, name: action.name }],
+      };
     default:
       return state;
   }
