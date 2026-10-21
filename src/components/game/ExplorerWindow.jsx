@@ -61,6 +61,10 @@ export default function ExplorerWindow({ onClose }) {
     }
   }, [item, dispatch]);
 
+  useEffect(() => {
+    if (item?.isFinal && !item.locked) dispatch({ type: 'FINISH' });
+  }, [item, dispatch]);
+
   const handleOpen = (child) => {
     if (isLocked(child)) {
       setLockTarget({ slug: child.slug, name: child.name, type: child.type });

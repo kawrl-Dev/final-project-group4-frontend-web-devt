@@ -1,23 +1,15 @@
 import { useReducer } from 'react';
 import { WindowContext } from './WindowContext';
 
-// Only ONE window can be open. readDocuments remembers every document the
-// player has opened (used by the Clues icon). solved remembers the slugs of
-// every lock the player has opened (this is what gets saved). paused shows the
-// pause menu on top of everything. All of it lives here, not in a window, so
-// closing the explorer does not erase it.
-const initialState = { openWindow: null, readDocuments: [], solved: [], paused: false };
+const initialState = { openWindow: null, readDocuments: [], solved: [], paused: false, finished: false };
 
 function reducer(state, action) {
   switch (action.type) {
     case 'OPEN':
-      // Opening a window replaces whatever was open.
       return { ...state, openWindow: { id: action.id, title: action.title } };
     case 'CLOSE':
       return { ...state, openWindow: null };
     case 'MARK_READ':
-      // Ignore duplicates. Returning the same state object also skips a re-render,
-      // so StrictMode's double-run is harmless.
       if (state.readDocuments.some((d) => d.slug === action.slug)) return state;
       return {
         ...state,
@@ -27,17 +19,18 @@ function reducer(state, action) {
       if (state.solved.includes(action.slug)) return state;
       return { ...state, solved: [...state.solved, action.slug] };
     case 'PAUSE':
-      return state.paused ? state : { ...state, paused: true };
+      return state.paused || state.finished ? state : { ...state, paused: true };
     case 'RESUME':
       return state.paused ? { ...state, paused: false } : state;
+    case 'FINISH':
+      return state.finished ? state : { ...state, finished: true, paused: false };
     case 'LOAD':
-      // Replace the whole session with a save. Windows close so the explorer
-      // restarts at the root folder, and the menu closes.
       return {
         openWindow: null,
         readDocuments: action.readDocuments,
         solved: action.solved,
         paused: false,
+        finished: false,
       };
     default:
       return state;
