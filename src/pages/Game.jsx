@@ -42,6 +42,9 @@ function ResumeLayer() {
             solved: data.solved ?? [],
             readDocuments: data.readDocuments ?? [],
           });
+          // A finished run goes straight to the end screen (LOAD resets
+          // `finished`, so FINISH has to come after it).
+          if (data.finishedAt) dispatch({ type: 'FINISH' });
           setStatus('done');
         })
         .catch((err) => {
