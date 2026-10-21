@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { VscArrowLeft } from 'react-icons/vsc';
 import { setCachedItem, useItem } from '../../hooks/useItem';
 import { useWindows } from '../../hooks/useWindows';
+import { putSave } from '../../services/saveService';
 import { DocumentIcon, FolderIcon, LockIcon } from './PixelIcons';
 import BsonView from './BsonView';
 import LockPrompt from './LockPrompt';
@@ -42,31 +43,18 @@ const ROOT = { slug: 'root', name: 'C:' };
 export default function ExplorerWindow({ onClose }) {
   const { state, dispatch } = useWindows();
 
-  // "stack" is the trail we walked through, e.g. [root, users, guest.bson].
-  // The LAST entry is what we are looking at (a folder or a document).
-  // Going Back = remove the last one.
   const [stack, setStack] = useState([ROOT]);
   const current = stack[stack.length - 1];
 
-  // The locked child the player double-clicked ({ slug, name, type }), or null.
-  // While set, the lock prompt replaces the folder contents.
   const [lockTarget, setLockTarget] = useState(null);
 
-  // The API does not return the path, so we build it from the stack.
-  // [root, users, guest.bson] -> "C:\users\guest.bson"
   const folderPath = ['C:', ...stack.slice(1).map((f) => f.name)].join('\\');
   const path = lockTarget ? `${folderPath}\\${lockTarget.name}` : folderPath;
 
   const { item, loading, error, waking, refetch } = useItem(current.slug);
 
-  // A folder listing from the server marks every lock as locked. After a Load
-  // (or a solve) the player has already opened some of them, so the list of
-  // solved slugs in WindowProvider overrides what the listing says.
   const isLocked = (child) => child.locked && !state.solved.includes(child.slug);
 
-  // Opening a document counts as "read". This runs only after the file has
-  // loaded successfully (item exists), never on double-click or on failure.
-  // MARK_READ ignores duplicates, so running twice (StrictMode) is harmless.
   useEffect(() => {
     if (item && item.type === 'file' && !item.locked) {
       dispatch({ type: 'MARK_READ', slug: item.slug, name: item.name });
@@ -74,7 +62,6 @@ export default function ExplorerWindow({ onClose }) {
   }, [item, dispatch]);
 
   const handleOpen = (child) => {
-    // Locked items show the lock prompt. Unlocked folders AND files open.
     if (isLocked(child)) {
       setLockTarget({ slug: child.slug, name: child.name, type: child.type });
       return;
@@ -82,10 +69,6 @@ export default function ExplorerWindow({ onClose }) {
     setStack((s) => [...s, { slug: child.slug, name: child.name }]);
   };
 
-  // Correct answer: remember the unlocked item, flip the lock icon in this
-  // folder's cached listing, record the solve (so Save can store it), and go
-  // back to the folder. The folder re-renders from the cache, so the icon
-  // turns into a normal folder/document.
   const handleSolved = (unlockedItem) => {
     setCachedItem(lockTarget.slug, unlockedItem);
     if (item?.children) {
@@ -97,10 +80,18 @@ export default function ExplorerWindow({ onClose }) {
       });
     }
     dispatch({ type: 'SOLVE', slug: lockTarget.slug });
+
+    const solvedSlugs = state.solved.includes(lockTarget.slug)
+      ? state.solved
+      : [...state.solved, lockTarget.slug];
+    putSave({
+      solved: solvedSlugs,
+      readDocuments: state.readDocuments.map((d) => d.slug),
+    }).catch(() => {});
+
     setLockTarget(null);
   };
 
-  // Back first closes the lock prompt, then walks up the folder trail.
   const handleBack = () => {
     if (lockTarget) {
       setLockTarget(null);
@@ -114,7 +105,6 @@ export default function ExplorerWindow({ onClose }) {
 
   return (
     <Window95 title="C:\" onClose={onClose}>
-      {/* Toolbar: Back button + read-only address bar */}
       <div className="flex items-center gap-2 px-1 py-1 text-sm text-black">
         <button
           type="button"
@@ -161,10 +151,8 @@ export default function ExplorerWindow({ onClose }) {
               </div>
             )}
 
-            {/* Document view */}
             {isFile && item.document && <BsonView document={item.document} />}
 
-            {/* Folder view */}
             {item && !isFile && item.children?.length === 0 && (
               <p className="text-green-700">This folder is empty.</p>
             )}
