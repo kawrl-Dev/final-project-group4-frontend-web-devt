@@ -1,58 +1,76 @@
 import { useCallback, useEffect, useState } from 'react';
-import { deleteEntry, getLeaderboard, submitScore, updateEntryScore } from '../services/leaderboardService';
+import {
+  deleteEntry,
+  getLeaderboard,
+  submitScore,
+  updateEntryScore,
+} from '../services/leaderboardService';
 
-export function useLeaderboard({ all = false } = {}) {
-  const [state, setState] = useState({ entries: [], loading: true, error: null });
+const WAKING_AFTER_MS = 3000;
+
+const byScore = (a, b) => b.score - a.score;
+
+export function useLeaderboard({ all = false, enabled = true } = {}) {
+  const [state, setState] = useState({ entries: [], error: null, key: null });
   const [reloadKey, setReloadKey] = useState(0);
+  const [slow, setSlow] = useState(false);
+
+  const requestKey = `${all}|${reloadKey}`;
 
   useEffect(() => {
-    let cancelled = false;
-    getLeaderboard({ all })
-      .then((entries) => {
-        if (!cancelled) setState({ entries, loading: false, error: null });
-      })
+    if (!enabled) return;
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => setSlow(true), WAKING_AFTER_MS);
+
+    getLeaderboard({ all }, controller.signal)
+      .then((entries) => setState({ entries, error: null, key: requestKey }))
       .catch((error) => {
-        if (!cancelled) setState((s) => ({ ...s, loading: false, error }));
+        if (controller.signal.aborted) return;
+        setState((s) => ({ ...s, error, key: requestKey }));
+      })
+      .finally(() => {
+        clearTimeout(timer);
+        if (!controller.signal.aborted) setSlow(false);
       });
+
     return () => {
-      cancelled = true;
+      controller.abort();
+      clearTimeout(timer);
     };
-  }, [all, reloadKey]);
+  }, [all, enabled, requestKey]);
 
-  const refetch = useCallback(() => {
-    setState((s) => ({ ...s, loading: true, error: null }));
-    setReloadKey((k) => k + 1);
+  const loading = state.key !== requestKey;
+  const error = loading ? null : state.error;
+  const waking = loading && slow;
+
+  const refetch = useCallback(() => setReloadKey((k) => k + 1), []);
+
+  const removeEntry = useCallback(async (id) => {
+    await deleteEntry(id);
+    setState((s) => ({ ...s, entries: s.entries.filter((e) => e._id !== id) }));
   }, []);
 
-  const removeEntry = useCallback(async (entryID) => {
-    await deleteEntry(entryID);
-    setState((s) => ({ ...s, entries: s.entries.filter((e) => e.entryID !== entryID) }));
+  const updateScore = useCallback(async (id, newScore) => {
+    const updated = await updateEntryScore(id, newScore);
+    setState((s) => ({
+      ...s,
+      entries: s.entries
+        .map((e) => (e._id === id ? { ...e, ...updated } : e))
+        .sort(byScore),
+    }));
   }, []);
 
-  // Updates a score and re-sorts the list so placement reflects the change immediately.
-  const updateScore = useCallback(async (entryID, newScore) => {
-    await updateEntryScore(entryID, newScore);
-    setState((s) => {
-      const updated = s.entries.map((e) =>
-        e.entryID === entryID ? { ...e, score: newScore } : e
-      );
-      // Re-sort by score descending so rank numbers are correct after the edit.
-      updated.sort((a, b) => b.score - a.score);
-      return { ...s, entries: updated };
-    });
-  }, []);
-
-  // Adds a new score entry (called from the game screen after a game ends).
-  const addEntry = useCallback(async ({ userID, player, score, completedDate }) => {
-    const entry = await submitScore({ userID, player, score, completedDate });
-    setState((s) => {
-      const updated = [...s.entries, entry];
-      updated.sort((a, b) => b.score - a.score);
-      // Players only see top 10; admins see all. Slice handled by the page via { all }.
-      return { ...s, entries: updated };
-    });
+  const submitMyScore = useCallback(async () => {
+    const entry = await submitScore();
+    refetch();
     return entry;
-  }, []);
+  }, [refetch]);
 
-  return { ...state, refetch, removeEntry, updateScore, addEntry };
+  return {
+    entries: state.entries, 
+    loading, error, waking, 
+    refetch, removeEntry, 
+    updateScore, submitMyScore 
+  };
 }

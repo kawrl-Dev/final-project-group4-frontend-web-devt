@@ -12,11 +12,13 @@ import Menu from './pages/Menu';
 import Skip from './components/Skip';
 import Leaderboard from './pages/Leaderboard'
 import AuthProvider from './context/AuthProvider';
-import { MOCK_USERS } from './context/AuthContext';
+import { applySettings } from './lib/settings';
+
+applySettings();
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <AuthProvider initialUser={MOCK_USERS.player}>
+    <AuthProvider>
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Skip><App /></Skip>} />
@@ -25,7 +27,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
           <Route path="/login" element={<Skip><Login /></Skip>} />
           <Route path="/menu" element={<Menu />} />
           <Route path="/load" element={<Load />} />
-          <Route path='/leaderboard' element={<Leaderboard/>}/>
+          <Route path="/leaderboard" element={<RequireAuth><Leaderboard /></RequireAuth>} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

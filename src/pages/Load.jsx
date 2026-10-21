@@ -3,6 +3,7 @@ import { Link, Navigate, useNavigate } from 'react-router';
 import { authFetch, clearToken, getToken } from '../lib/auth';
 import FloatingBinary from '../components/FloatingBinary';
 import bg from '../assets/home-page.png';
+import Spinner from '../components/Spinner';
 
 const SAVE_URL = '/api/saves/me';
 const PLAY_ROUTE = '/game';
@@ -94,11 +95,7 @@ export default function Load() {
                 Load Game
             </h1>
 
-            {status === 'loading' && (
-                <p role="status" className="text-brand-spring text-[clamp(1rem,1.6vw,1.25rem)]">
-                    Loading...
-                </p>
-            )}
+            {status === 'loading' && <Spinner className="self-center py-4"/>}
 
             {status === 'error' && (
                 <>

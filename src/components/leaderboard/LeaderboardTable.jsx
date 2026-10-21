@@ -1,14 +1,17 @@
 import { memo, useState } from 'react';
 
+const formatDate = (iso) => (iso ? new Date(iso).toLocaleDateString() : '');
+
 const Row = memo(function Row({ entry, rank, isMe, isAdmin, onDelete, onUpdateScore }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(String(entry.score));
   const [saving, setSaving] = useState(false);
 
   const handleScoreSubmit = async () => {
+    if (saving) return;
     const parsed = parseInt(draft, 10);
     if (isNaN(parsed) || parsed < 0) {
-      setDraft(String(entry.score)); // reset bad input
+      setDraft(String(entry.score));
       setEditing(false);
       return;
     }
@@ -17,7 +20,7 @@ const Row = memo(function Row({ entry, rank, isMe, isAdmin, onDelete, onUpdateSc
       return;
     }
     setSaving(true);
-    await onUpdateScore(entry.entryID, parsed);
+    await onUpdateScore(entry._id, parsed);
     setSaving(false);
     setEditing(false);
   };
@@ -30,16 +33,16 @@ const Row = memo(function Row({ entry, rank, isMe, isAdmin, onDelete, onUpdateSc
     >
       <td className="px-4 py-2 text-green-500">#{rank}</td>
       <td className="px-4 py-2">
-        {entry.player}
+        {entry.username}
         {isMe && <span className="ml-2 text-xs text-green-400">(you)</span>}
       </td>
 
-      {/* Score cell: editable for admins, read-only for players */}
       <td className="px-4 py-2 text-right tabular-nums">
         {isAdmin && editing ? (
           <input
             type="number"
             min={0}
+            step={1}
             value={draft}
             disabled={saving}
             autoFocus
@@ -50,7 +53,7 @@ const Row = memo(function Row({ entry, rank, isMe, isAdmin, onDelete, onUpdateSc
               if (e.key === 'Escape') { setDraft(String(entry.score)); setEditing(false); }
             }}
             className="w-24 rounded border border-green-600 bg-zinc-900 px-2 py-0.5 text-right text-green-200 focus:outline-none focus-visible:ring-1 focus-visible:ring-green-400 disabled:opacity-50"
-            aria-label={`Edit score for ${entry.player}`}
+            aria-label={`Edit score for ${entry.username}`}
           />
         ) : (
           <span
@@ -63,16 +66,16 @@ const Row = memo(function Row({ entry, rank, isMe, isAdmin, onDelete, onUpdateSc
         )}
       </td>
 
-      <td className="px-4 py-2 text-green-300/70">{entry.completedDate}</td>
+      <td className="px-4 py-2 text-green-300/70">{formatDate(entry.createdAt)}</td>
       {isAdmin && (
         <>
-          <td className="px-4 py-2 text-xs text-green-300/60">{entry.entryID}</td>
+          <td className="px-4 py-2 text-xs text-green-300/60">{entry._id}</td>
           <td className="px-4 py-2 text-right">
             <button
               type="button"
               onClick={() => onDelete(entry)}
               className="rounded border border-red-500/60 px-2 py-1 text-xs text-red-400 hover:bg-red-500/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
-              aria-label={`Delete entry for ${entry.player}`}
+              aria-label={`Delete entry for ${entry.username}`}
             >
               delete
             </button>
@@ -83,7 +86,6 @@ const Row = memo(function Row({ entry, rank, isMe, isAdmin, onDelete, onUpdateSc
   );
 });
 
-// Shared table. Admin-only columns appear when isAdmin is true.
 export default function LeaderboardTable({ entries, currentUserID, isAdmin = false, onDelete, onUpdateScore }) {
   return (
     <div className="overflow-x-auto rounded border border-green-800/60">
@@ -109,10 +111,10 @@ export default function LeaderboardTable({ entries, currentUserID, isAdmin = fal
         <tbody>
           {entries.map((entry, i) => (
             <Row
-              key={entry.entryID}
+              key={entry._id}
               entry={entry}
               rank={i + 1}
-              isMe={entry.userID === currentUserID}
+              isMe={!!currentUserID && entry.user === currentUserID}
               isAdmin={isAdmin}
               onDelete={onDelete}
               onUpdateScore={onUpdateScore}
