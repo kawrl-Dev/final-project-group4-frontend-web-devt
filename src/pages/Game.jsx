@@ -1,5 +1,7 @@
-import { useEffect } from 'react';
-import { clearItemCache } from '../hooks/useItem';
+import { useEffect, useState } from 'react';
+import { Link, useLocation } from 'react-router';
+import { clearItemCache, setCachedItem } from '../hooks/useItem';
+import { getSave } from '../services/saveService';
 import WindowProvider from '../context/WindowProvider';
 import { useWindows } from '../hooks/useWindows';
 import Desktop from '../components/game/Desktop';
@@ -19,6 +21,50 @@ function WindowLayer() {
     return <CluesWindow onClose={() => dispatch({ type: 'CLOSE' })} />;
   }
   return null;
+}
+
+//ability to read saves properly after resuming
+function ResumeLayer() {
+  const { state: routeState } = useLocation();
+  const { dispatch } = useWindows();
+  const resume = !!routeState?.resume;
+  const [status, setStatus] = useState(resume ? 'loading' : 'done');
+
+  useEffect(() => {
+    if (!resume) return;
+    const controller = new AbortController();
+    getSave(controller.signal)
+        .then((data) => {
+          clearItemCache();
+          (data.items ?? []).forEach((item) => setCachedItem(item.slug, item));
+          dispatch({
+            type: 'LOAD',
+            solved: data.solved ?? [],
+            readDocuments: data.readDocuments ?? [],
+          });
+          setStatus('done');
+        })
+        .catch((err) => {
+          if (err?.name === 'AbortError') return;
+          // No save found just means a fresh game.
+          setStatus(err?.kind === 'notFound' ? 'done' : 'error');
+        });
+    return () => controller.abort();
+  }, [resume, dispatch]);
+
+  if (status === 'done') return null;
+  return (
+      <div className="absolute inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-black font-pixel text-xl text-green-300" style={glow}>
+        {status === 'loading' ? (
+            <p role="status" className="animate-pulse">loading your save...</p>
+        ) : (
+            <>
+              <p role="alert">Could not load your save.</p>
+              <Link to="/menu" className="underline">Back to menu</Link>
+            </>
+        )}
+      </div>
+  );
 }
 
 // Esc opens the pause menu. This listener only exists while the menu is closed;
@@ -58,6 +104,7 @@ export default function Game() {
           <Desktop />
           <WindowLayer />
           <Taskbar />
+          <ResumeLayer />
           <PauseLayer />
 
           {/* Scanlines (same as the menu). z-25 = above the windows (z-20) but below the

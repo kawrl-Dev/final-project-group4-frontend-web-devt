@@ -139,7 +139,7 @@ export default function Load() {
                     )}
 
                     <div className="grid gap-4 sm:grid-cols-2">
-                        <button onClick={() => navigate(PLAY_ROUTE, { state: { slug: save.location } })} className={buttonClass}>
+                        <button onClick={() => navigate(PLAY_ROUTE, { state: { resume: true } })} className={buttonClass}>
                             Continue
                         </button>
                         <button onClick={() => dialogRef.current?.showModal()} disabled={busy} className={outlineClass}>
