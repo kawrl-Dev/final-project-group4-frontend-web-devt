@@ -76,11 +76,16 @@ export default function Register() {
     }
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (!tokenRef.current) return;
-    saveToken(tokenRef.current);
+    const token = tokenRef.current;
     tokenRef.current = '';
-    navigate('/menu', { replace: true });
+    try {
+      await login(token);
+      navigate('/menu', { replace: true });
+    } catch {
+      navigate('/login', { replace: true });
+    }
   };
 
   return (

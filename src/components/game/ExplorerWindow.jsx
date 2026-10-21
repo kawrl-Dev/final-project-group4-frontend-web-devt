@@ -14,7 +14,6 @@ function pickIcon(child, locked) {
   return child.type === 'folder' ? <FolderIcon /> : <DocumentIcon />;
 }
 
-// Mounts when an error appears, so the countdown restarts on every failure.
 function RetryButton({ onRetry }) {
   const [left, setLeft] = useState(RETRY_SECONDS);
 
@@ -38,7 +37,6 @@ function RetryButton({ onRetry }) {
   );
 }
 
-// The window always starts at the root folder.
 const ROOT = { slug: 'root', name: 'C:' };
 
 export default function ExplorerWindow({ onClose }) {

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { clearItemCache } from '../hooks/useItem';
+import { useAuth } from '../hooks/useAuth';
 import { Link, Navigate, useNavigate } from 'react-router';
 import { authFetch, clearToken, getToken } from '../lib/auth';
 import FloatingBinary from '../components/FloatingBinary';
@@ -17,6 +18,7 @@ const glow = {
     textShadow: '0 0 0.5em #00ED64, 0 0 0.2em #00ED64, 0 0 0.45em #00684A',
 };
 const linkGlow = { textShadow: '0 0 0.2em #00684A' };
+// remove: import { clearItemCache } from '../hooks/useItem';  (no longer used here)
 
 const VERIFY_URL = '/api/auth/me';
 
@@ -39,6 +41,7 @@ export default function Menu() {
     const dialogRef = useRef(null);
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [status, setStatus] = useState(() => (getToken() ? 'checking' : 'unauth'));
+    const { logout } = useAuth();
 
     const verify = useCallback(async (signal) => {
         try {
@@ -77,8 +80,7 @@ export default function Menu() {
     }, [verify]);
 
     const handleLogout = () => {
-        clearToken();
-        clearItemCache();
+        logout();
         navigate('/', { replace: true });
     };
 

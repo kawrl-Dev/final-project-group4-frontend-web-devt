@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { saveToken } from '../lib/auth';
+import { useAuth } from '../hooks/useAuth';
 import { API_BASE } from '../lib/config';
 import FloatingBinary from '../components/FloatingBinary';
 import bg from '../assets/home-page.png';
@@ -18,6 +18,7 @@ export default function Login() {
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
+    const { login } = useAuth();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -41,7 +42,7 @@ export default function Login() {
             const data = await res.json().catch(() => ({}));
 
             if (res.ok && typeof data.token === 'string' && data.token) {
-                saveToken(data.token);
+                await login(data.token);
                 navigate('/menu', { replace: true });
                 return;
             }

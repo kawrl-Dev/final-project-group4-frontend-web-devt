@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { AuthContext } from './AuthContext';
 import { api } from '../services/api';
-import { getToken } from '../lib/auth';
+import { clearToken, getToken, saveToken } from '../lib/auth';
+import { clearItemCache } from '../hooks/useItem';
 
 export default function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -24,6 +25,23 @@ export default function AuthProvider({ children }) {
     return () => controller.abort();
   }, []);
 
-  const value = { user, setUser, isAdmin: user?.role === 'admin', loading };
+  const login = useCallback(async (token) => {
+    saveToken(token);
+    try {
+      const me = await api('/api/auth/me');
+      setUser({ id: me.id, username: me.username, role: me.role });
+    } catch (err) {
+      clearToken(); // don't keep a token we couldn't verify
+      throw err;
+    }
+  }, []);
+
+  const logout = useCallback(() => {
+    clearToken();
+    clearItemCache();
+    setUser(null);
+  }, []);
+
+  const value = { user, setUser, isAdmin: user?.role === 'admin', loading, login, logout };
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

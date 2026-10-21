@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router';
 import { authFetch, clearToken, getToken } from '../lib/auth';
+import { deleteSave, getSave } from '../services/saveService';
 import FloatingBinary from '../components/FloatingBinary';
 import bg from '../assets/home-page.png';
 import Spinner from '../components/Spinner';
@@ -22,34 +23,16 @@ export default function Load() {
 
     const loadSave = useCallback(async (signal) => {
         try {
-            const res = await authFetch(SAVE_URL, { signal });
-            if (res.status === 404) {
-                setSave(null);
-                setStatus('empty');
-                return;
-            }
-            if (res.status === 401 || res.status === 403) {
-                clearToken();
-                setStatus('unauth');
-                return;
-            }
-            if (!res.ok) {
-                setStatus('error');
-                return;
-            }
-            const data = await res.json().catch(() => null);
-            if (!data || typeof data.location !== 'string') {
-                setStatus('error');
-                return;
-            }
+            const data = await getSave(signal);
             setSave({
-                location: data.location,
-                solvedCount: Array.isArray(data.solved) ? data.solved.length : 0,
-                wrongGuesses: Number.isFinite(data.wrongGuesses) ? data.wrongGuesses : 0,
+            solvedCount: data.solved?.length ?? 0,
+            readCount: data.readDocuments?.length ?? 0,
+            updatedAt: data.updatedAt,
             });
             setStatus('ready');
         } catch (err) {
-            if (err.name !== 'AbortError') setStatus('error');
+            if (err?.name === 'AbortError') return;
+            setStatus(err.kind === 'notFound' ? 'empty' : err.kind === 'unauthorized' ? 'unauth' : 'error');
         }
     }, []);
 
