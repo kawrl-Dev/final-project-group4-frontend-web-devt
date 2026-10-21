@@ -33,3 +33,22 @@
     -webkit-mask-image: linear-gradient(to bottom, transparent, #000 15%, #000 85%, transparent);
     mask-image: linear-gradient(to bottom, transparent #000 15%, #000 85%, transparent);
 }
+
+#root {
+    filter: var(--app-filter, none);
+}
+
+html[data-large-text='true'] {
+    font-size: 125%;
+}
+
+html[data-reduce-glow='true'] * {
+    text-shadow: none !important;
+}
+
+html[data-reduce-motion='true'] *:not(.animate-spin),
+html[data-reduce-motion='true'] *:not(.animate-spin)::before,
+html[data-reduce-motion='true'] *:not(.animate-spin)::after {
+    animation: none !important;
+    transition: none !important;
+}

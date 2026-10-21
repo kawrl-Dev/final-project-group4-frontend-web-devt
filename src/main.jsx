@@ -12,6 +12,9 @@ import Menu from './pages/Menu';
 import Skip from './components/Skip';
 import Leaderboard from './pages/Leaderboard'
 import AuthProvider from './context/AuthProvider';
+import { applySettings } from './lib/settings';
+
+applySettings();
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
