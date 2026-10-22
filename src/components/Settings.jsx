@@ -169,7 +169,7 @@ export default function SettingsDialog({ open, onClose, showSaveDelete = true })
                     <p role="status" className="border-l-4 border-brand-spring bg-brand-spring/10 px-4 py-3 text-brand-spring text-[clamp(0.875rem,1.3vw,1rem)]">{notice}</p>
                 )}
                 {error && (
-                    <p role="start" className="border-l-4 border-red-400 bg-red-400/10 px-4 py-3 text-red-300 text-[clamp(0.875rem,1.3vw,1rem)]">{error}</p>
+                    <p role="alert" className="border-l-4 border-red-400 bg-red-400/10 px-4 py-3 text-red-300 text-[clamp(0.875rem,1.3vw,1rem)]">{error}</p>
                 )}
             </div>
 

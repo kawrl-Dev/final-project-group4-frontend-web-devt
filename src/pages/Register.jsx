@@ -56,7 +56,7 @@ export default function Register() {
 
       if (!res.ok) {
         const messages = {
-          400: 'Username must be 3-20 letters, numbers, or underscores and password must be 8-50 characters.',
+          400: 'Username must be 3-20 letters, numbers, or underscores and password must be 8-20 characters.',
           409: 'That username is not available.',
           429: 'Too many attempts. Try again later.',
         };
