@@ -1,23 +1,24 @@
 import { useReducer } from 'react';
 import { WindowContext } from './WindowContext';
 
-// Only ONE window can be open. readDocuments remembers every document the
-// player has opened (used by the Clues icon). solved remembers the slugs of
-// every lock the player has opened (this is what gets saved). paused shows the
-// pause menu on top of everything. All of it lives here, not in a window, so
-// closing the explorer does not erase it.
-const initialState = { openWindow: null, readDocuments: [], solved: [], paused: false };
+const initialState = {
+  openWindow: null, readDocuments: [], solved: [], paused: false,
+  finished: false, wrongGuesses: 0, startedAt: null, finishedAt: null,
+};
+
+const toMs = (value) => {
+  if (!value) return null;
+  const ms = new Date(value).getTime();
+  return Number.isNaN(ms) ? null : ms;
+};
 
 function reducer(state, action) {
   switch (action.type) {
     case 'OPEN':
-      // Opening a window replaces whatever was open.
       return { ...state, openWindow: { id: action.id, title: action.title } };
     case 'CLOSE':
       return { ...state, openWindow: null };
     case 'MARK_READ':
-      // Ignore duplicates. Returning the same state object also skips a re-render,
-      // so StrictMode's double-run is harmless.
       if (state.readDocuments.some((d) => d.slug === action.slug)) return state;
       return {
         ...state,
@@ -25,20 +26,46 @@ function reducer(state, action) {
       };
     case 'SOLVE':
       if (state.solved.includes(action.slug)) return state;
-      return { ...state, solved: [...state.solved, action.slug] };
+      return {
+        ...state,
+        solved: [...state.solved, action.slug],
+        startedAt: state.startedAt ?? action.at ?? null,
+      };
+    case 'WRONG_GUESS':
+      return {
+        ...state,
+        wrongGuesses: state.wrongGuesses + 1,
+        startedAt: state.startedAt ?? action.at ?? null,
+      };
+    case 'SYNC': {
+      const save = action.save;
+      if (!save) return state;
+      return {
+        ...state,
+        startedAt: toMs(save.startedAt) ?? state.startedAt,
+        finishedAt: toMs(save.finishedAt) ?? state.finishedAt,
+        wrongGuesses: typeof save.wrongGuesses === 'number' ? save.wrongGuesses : state.wrongGuesses,
+      };
+    }
     case 'PAUSE':
-      return state.paused ? state : { ...state, paused: true };
+      return state.paused || state.finished ? state : { ...state, paused: true };
     case 'RESUME':
       return state.paused ? { ...state, paused: false } : state;
+    case 'FINISH':
+      return state.finished
+        ? state
+        : { ...state, finished: true, paused: false, finishedAt: state.finishedAt ?? action.at ?? null };
     case 'LOAD':
-      // Replace the whole session with a save. Windows close so the explorer
-      // restarts at the root folder, and the menu closes.
       return {
-        openWindow: null,
+        ...initialState,
         readDocuments: action.readDocuments,
         solved: action.solved,
-        paused: false,
+        wrongGuesses: action.wrongGuesses ?? 0,
+        startedAt: toMs(action.startedAt),
+        finishedAt: toMs(action.finishedAt),
       };
+    case 'RESET':
+      return { ...initialState, paused: state.paused };
     default:
       return state;
   }

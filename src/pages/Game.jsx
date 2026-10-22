@@ -9,6 +9,7 @@ import ExplorerWindow from '../components/game/ExplorerWindow';
 import Taskbar from '../components/game/Taskbar';
 import CluesWindow from '../components/game/CluesWindow';
 import PauseMenu from '../components/game/PauseMenu';
+import EndScreen from '../components/game/EndScreen';
 
 const glow = { textShadow: '0 0 0.05em #22C55E, 0 0 0.2em #22C55E, 0 0 0.45em #15803D' };
 
@@ -23,7 +24,6 @@ function WindowLayer() {
   return null;
 }
 
-//ability to read saves properly after resuming
 function ResumeLayer() {
   const { state: routeState } = useLocation();
   const { dispatch } = useWindows();
@@ -37,16 +37,21 @@ function ResumeLayer() {
         .then((data) => {
           clearItemCache();
           (data.items ?? []).forEach((item) => setCachedItem(item.slug, item));
+          // LOAD resumes the clock from the stored startedAt (it does not restart it).
           dispatch({
             type: 'LOAD',
             solved: data.solved ?? [],
             readDocuments: data.readDocuments ?? [],
+            wrongGuesses: data.wrongGuesses ?? 0,
+            startedAt: data.startedAt,
+            finishedAt: data.finishedAt,
           });
+          // A finished run goes straight to the end screen (LOAD resets `finished`, so FINISH has to come after it).
+          if (data.finishedAt) dispatch({ type: 'FINISH' });
           setStatus('done');
         })
         .catch((err) => {
           if (err?.name === 'AbortError') return;
-          // No save found just means a fresh game.
           setStatus(err?.kind === 'notFound' ? 'done' : 'error');
         });
     return () => controller.abort();
@@ -67,38 +72,37 @@ function ResumeLayer() {
   );
 }
 
-// Esc opens the pause menu. This listener only exists while the menu is closed;
-// while it is open, PauseMenu listens for Esc itself (cancel confirm / resume).
 function PauseLayer() {
   const { state, dispatch } = useWindows();
-  const { paused } = state;
+  const { paused, finished } = state;
 
   useEffect(() => {
-    if (paused) return;
+    if (paused || finished) return;
     const onKeyDown = (e) => {
       if (e.key === 'Escape' && !e.repeat) dispatch({ type: 'PAUSE' });
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [paused, dispatch]);
+  }, [paused, finished, dispatch]);
 
   return paused ? <PauseMenu /> : null;
+}
+
+function FinishLayer() {
+  const { state } = useWindows();
+  return state.finished ? <EndScreen /> : null;
 }
 
 export default function Game() {
   useEffect(() => clearItemCache, []);
   return (
     <>
-      {/* Narrow screens (under 1024px = Tailwind "lg") see only this message */}
       <main className="flex min-h-screen items-center justify-center bg-black p-6 text-center font-pixel text-xl text-green-300 lg:hidden" style={glow}>
         Use a bigger screen to play MinosDB.
       </main>
 
       <WindowProvider>
-        <main
-          className="relative hidden h-screen overflow-hidden bg-black lg:block"
-        >
-          {/* Green frame from the menu */}
+        <main className="relative hidden h-screen overflow-hidden bg-black lg:block">
           <div aria-hidden="true" className="pointer-events-none absolute inset-6 z-0 border-2 border-green-500/45 shadow-[inset_0_0_24px_#22C55E]" />
 
           <Desktop />
@@ -106,9 +110,8 @@ export default function Game() {
           <Taskbar />
           <ResumeLayer />
           <PauseLayer />
+          <FinishLayer />
 
-          {/* Scanlines (same as the menu). z-25 = above the windows (z-20) but below the
-              taskbar (z-30) and the pause menu (z-40), so the score stays crisp. Not clickable. */}
           <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-25" style={{ background: 'repeating-linear-gradient(0deg, rgba(0,0,0,0.28) 0px, rgba(0,0,0,0.28) 2px, transparent 2px, transparent 4px)' }} />
         </main>
       </WindowProvider>
