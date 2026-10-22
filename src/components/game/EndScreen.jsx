@@ -115,9 +115,11 @@ export default function EndScreen() {
 
           {submit === 'done' && (
             <p role="status" className="border-l-4 border-green-700 bg-green-100 px-2 py-1 text-sm text-green-900">
-              {typeof result?.score === 'number'
-                ? `Submitted! Your leaderboard score: ${result.score.toLocaleString()}`
-                : 'Submitted!'}
+              {typeof result?.score !== 'number'
+                ? 'Submitted!'
+                : result.improved === false
+                  ? `Your best is still ${result.score.toLocaleString()}.`
+                  : `New best! Your leaderboard score: ${result.score.toLocaleString()}`}
             </p>
           )}
 
