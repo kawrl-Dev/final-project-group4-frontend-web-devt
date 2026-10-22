@@ -52,7 +52,8 @@ export default function Menu() {
     const dialogRef = useRef(null);
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [status, setStatus] = useState(() => (getToken() ? 'checking' : 'unauth'));
-    const { logout } = useAuth();
+    const { logout, isAdmin } = useAuth();
+    const menuItems = isAdmin ? [...items, { label: 'Manage Users', to: '/admin/users' }] : items;
     const [reloadKey, setReloadKey] = useState(0);
 
     useEffect(() => {
@@ -117,7 +118,7 @@ export default function Menu() {
                     </h1>
                     
                     <nav aria-label="Main Menu" className="relative z-10 mt-[2.5vw] flex flex-col items-center gap-2">
-                        {items.map((item) => (
+                        {menuItems.map((item) => (
                             <Link
                                 key={item.label}
                                 to={item.to}
