@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { clearItemCache } from '../hooks/useItem';
+import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { Link, Navigate, useNavigate } from 'react-router';
 import { authFetch, clearToken, getToken } from '../lib/auth';
@@ -18,8 +17,6 @@ const glow = {
     textShadow: '0 0 0.5em #00ED64, 0 0 0.2em #00ED64, 0 0 0.45em #00684A',
 };
 const linkGlow = { textShadow: '0 0 0.2em #00684A' };
-// remove: import { clearItemCache } from '../hooks/useItem';  (no longer used here)
-
 const VERIFY_URL = '/api/auth/me';
 
 function Arrow() {
@@ -36,31 +33,35 @@ function Arrow() {
     );
 }
 
+async function checkSession(signal) {
+    try {
+        const res = await authFetch(VERIFY_URL, { signal });
+        if (res.ok) return 'authed';
+        if (res.status === 401 || res.status === 403) {
+            clearToken();
+            return 'unauth';
+        }
+        return 'error';
+    } catch (err) {
+        return err.name === 'AbortError' ? null : 'error';
+    }
+}
+
 export default function Menu() {
     const navigate = useNavigate();
     const dialogRef = useRef(null);
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [status, setStatus] = useState(() => (getToken() ? 'checking' : 'unauth'));
     const { logout } = useAuth();
-
-    const verify = useCallback(async (signal) => {
-        try {
-            const res = await authFetch(VERIFY_URL, { signal });
-            if (res.ok) setStatus('authed');
-            else if (res.status === 401 || res.status === 403) {
-                clearToken();
-                setStatus('unauth');
-            } else setStatus('error');
-        } catch (err) {
-            if (err.name !== 'AbortError') setStatus('error');
-        }
-    }, []);
+    const [reloadKey, setReloadKey] = useState(0);
 
     useEffect(() => {
         if (!getToken()) return;
 
         const controller = new AbortController();
-        verify(controller.signal);
+        checkSession(controller.signal).then((next) => {
+            if (next) setStatus(next);
+        });
 
         const onPageShow = (e) => {
             if (!e.persisted) return;
@@ -69,15 +70,15 @@ export default function Menu() {
                 return;
             }
             setStatus('checking');
-            verify();
+            setReloadKey((k) => k + 1);
         };
         window.addEventListener('pageshow', onPageShow);
 
-        return() => {
+        return () => {
             controller.abort();
             window.removeEventListener('pageshow', onPageShow);
         };
-    }, [verify]);
+    }, [reloadKey]);
 
     const handleLogout = () => {
         logout();
@@ -101,7 +102,7 @@ export default function Menu() {
                     </p>
                     <button onClick={() => {
                         setStatus('checking');
-                        verify();
+                        setReloadKey((k) => k + 1);
                     }}
                     className="border-2 border-brand-spring px-4 py-2 font-pixel text-brand-spring hover:bg-brand-spring hover:text-brand-slate">
                         Try Again

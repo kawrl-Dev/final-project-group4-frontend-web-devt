@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router';
 import { authFetch, clearToken, getToken } from '../lib/auth';
-import { deleteSave, getSave } from '../services/saveService';
+import { getSave } from '../services/saveService';
 import FloatingBinary from '../components/FloatingBinary';
 import bg from '../assets/home-page.png';
 import Spinner from '../components/Spinner';
@@ -20,30 +20,31 @@ export default function Load() {
     const [save,setSave] = useState(null);
     const [error, setError] = useState('');
     const [busy, setBusy] = useState(false);
+    const [reloadKey, setReloadKey] = useState(0);
 
-    const loadSave = useCallback(async (signal) => {
-        try {
-            const data = await getSave(signal);
-            setSave({
-            solvedCount: data.solved?.length ?? 0,
-            readCount: data.readDocuments?.length ?? 0,
-            wrongGuesses: data.wrongGuesses ?? 0,
-            finished: !!data.finishedAt,
-            updatedAt: data.updatedAt,
-            });
-            setStatus('ready');
-        } catch (err) {
-            if (err?.name === 'AbortError') return;
-            setStatus(err.kind === 'notFound' ? 'empty' : err.kind === 'unauthorized' ? 'unauth' : 'error');
-        }
-    }, []);
 
     useEffect(() => {
         if (!getToken()) return;
+
         const controller = new AbortController();
-        loadSave(controller.signal);
+        getSave(controller.signal)
+            .then((data) => {
+                setSave({
+                    solvedCount: data.solved?.length ?? 0,
+                    readCount: data.readDocuments?.length ?? 0,
+                    wrongGuesses: data.wrongGuesses ?? 0,
+                    finished: !!data.finishedAt,
+                    updatedAt: data.updatedAt,
+                });
+                setStatus('ready');
+            })
+            .catch((err) => {
+                if (err?.name === 'AbortError') return;
+                setStatus(err.kind === 'notFound' ? 'empty' : err.kind === 'unauthorized' ? 'unauth' : 'error');
+            });
+
         return () => controller.abort();
-    }, [loadSave]);
+    }, [reloadKey]);
 
     const handleDelete = async () => {
         setBusy(true);
@@ -89,7 +90,7 @@ export default function Load() {
                     </p>
                     <button onClick={() => {
                         setStatus('loading');
-                        loadSave();
+                        setReloadKey((k) => k + 1);
                     }}
                     className={buttonClass}>
                         Try Again

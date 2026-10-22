@@ -165,30 +165,32 @@ export default function PauseMenu() {
   const noSave = info.status === 'none';
 
   const confirmInfo = {
-    save: {
-      text: info.updatedAt
-        ? `Overwrite your save from ${formatDate(info.updatedAt)}?`
-        : 'Overwrite your existing save, if there is one?',
-      label: 'Overwrite',
-      action: save,
-    },
-    load: {
-      text: 'Load your save? Progress since you last saved will be lost.',
-      label: 'Load',
-      action: load,
-    },
-    delete: {
-      text: 'Delete your save? This cannot be undone, and your current run will restart from zero.',
-      label: 'Delete',
-      action: remove,
-    },
-    menu: {
-      text: 'Leave without saving? Unsaved progress will be lost.',
-      label: 'Leave',
-      action: leave,
-      secondary: { label: 'Save & Exit', action: saveAndExit },
-    },
-  }[confirm];
+  save: {
+    text: info.updatedAt
+      ? `Overwrite your save from ${formatDate(info.updatedAt)}?`
+      : 'Overwrite your existing save, if there is one?',
+    label: 'Overwrite',
+  },
+  load: {
+    text: 'Load your save? Progress since you last saved will be lost.',
+    label: 'Load',
+  },
+  delete: {
+    text: 'Delete your save? This cannot be undone, and your current run will restart from zero.',
+    label: 'Delete',
+  },
+  menu: {
+    text: 'Leave without saving? Unsaved progress will be lost.',
+    label: 'Leave',
+  },
+}[confirm];
+
+const runConfirmed = () => {
+  if (confirm === 'save') save();
+  else if (confirm === 'load') load();
+  else if (confirm === 'delete') remove();
+  else if (confirm === 'menu') leave();
+};
 
   return (
     <div className="absolute inset-0 z-40">
@@ -216,12 +218,12 @@ export default function PauseMenu() {
             <div className="flex flex-col gap-3">
               <p className="text-sm">{confirmInfo.text}</p>
               <div className="flex gap-2">
-                {confirmInfo.secondary && (
-                  <button type="button" onClick={confirmInfo.secondary.action} className={buttonClass}>
-                    {confirmInfo.secondary.label}
+                {confirm === 'menu' && (
+                  <button type="button" onClick={saveAndExit} className={buttonClass}>
+                    Save & Exit
                   </button>
                 )}
-                <button type="button" onClick={confirmInfo.action} className={buttonClass}>
+                <button type="button" onClick={runConfirmed} className={buttonClass}>
                   {confirmInfo.label}
                 </button>
                 <button type="button" autoFocus onClick={() => setConfirm(null)} className={buttonClass}>
