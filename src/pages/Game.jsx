@@ -37,19 +37,21 @@ function ResumeLayer() {
         .then((data) => {
           clearItemCache();
           (data.items ?? []).forEach((item) => setCachedItem(item.slug, item));
+          // LOAD resumes the clock from the stored startedAt (it does not restart it).
           dispatch({
             type: 'LOAD',
             solved: data.solved ?? [],
             readDocuments: data.readDocuments ?? [],
+            wrongGuesses: data.wrongGuesses ?? 0,
+            startedAt: data.startedAt,
+            finishedAt: data.finishedAt,
           });
-          // A finished run goes straight to the end screen (LOAD resets
-          // `finished`, so FINISH has to come after it).
+          // A finished run goes straight to the end screen (LOAD resets `finished`, so FINISH has to come after it).
           if (data.finishedAt) dispatch({ type: 'FINISH' });
           setStatus('done');
         })
         .catch((err) => {
           if (err?.name === 'AbortError') return;
-          // No save found just means a fresh game.
           setStatus(err?.kind === 'notFound' ? 'done' : 'error');
         });
     return () => controller.abort();
@@ -100,9 +102,7 @@ export default function Game() {
       </main>
 
       <WindowProvider>
-        <main
-          className="relative hidden h-screen overflow-hidden bg-black lg:block"
-        >
+        <main className="relative hidden h-screen overflow-hidden bg-black lg:block">
           <div aria-hidden="true" className="pointer-events-none absolute inset-6 z-0 border-2 border-green-500/45 shadow-[inset_0_0_24px_#22C55E]" />
 
           <Desktop />

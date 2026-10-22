@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useItem } from '../../hooks/useItem';
+import { useWindows } from '../../hooks/useWindows';
 import { solve } from '../../services/gameService';
 import { LockIcon } from './PixelIcons';
 import { RAISED } from './Window95';
@@ -30,17 +31,14 @@ const buttonClass = `bg-gray-300 px-3 py-0.5 text-sm text-black ${RAISED} disabl
  * onCancel  = go back to the folder
  */
 export default function LockPrompt({ target, onSolved, onCancel }) {
-  // The folder listing does not include the lock text, so we load the locked
-  // item itself. useItem gives us loading / error / retry for free.
+  const { dispatch } = useWindows();
   const { item, loading, error: loadError, waking, refetch } = useItem(target.slug);
-
   const [answer, setAnswer] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [showHint, setShowHint] = useState(false);
   const controllerRef = useRef(null);
 
-  // Leaving the prompt cancels any answer check still in flight.
   useEffect(() => () => controllerRef.current?.abort(), []);
 
   const handleSubmit = async (e) => {
@@ -59,11 +57,14 @@ export default function LockPrompt({ target, onSolved, onCancel }) {
     controllerRef.current = controller;
 
     try {
-      // The answer only goes to the server. It is never stored anywhere here.
       const result = await solve(target.slug, trimmed, controller.signal);
       if (result?.correct && result.item) {
         onSolved(result.item);
         return;
+      }
+      if (!result?.correct) {
+        // The server counted this wrong guess too. This copy only feeds the score estimate in the taskbar; the server's count is what gets scored.
+        dispatch({ type: 'WRONG_GUESS', at: Date.now() });
       }
       setError(result?.correct ? 'Unlocked, but the server sent no item. Try again.' : 'Wrong answer. Try again.');
       setAnswer('');
@@ -78,7 +79,11 @@ export default function LockPrompt({ target, onSolved, onCancel }) {
   return (
     <div
       className="flex flex-col gap-3"
-      onKeyDown={(e) => e.key === 'Escape' && onCancel()}
+      onKeyDown={(e) => {
+        if (e.key !== 'Escape') return;
+        e.stopPropagation();
+        onCancel();
+      }}
     >
       <div className="flex items-center gap-3">
         <span className="h-10 w-10 shrink-0"><LockIcon /></span>

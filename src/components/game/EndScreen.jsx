@@ -32,12 +32,14 @@ function messageFor(err, fallback) {
  *
  * 1. On mount it saves the game once, so the server has finishedAt before
  *    the player can submit (the auto-save after the final solve normally
- *    got there first; this is the safety net).
+ *    got there first; this is the safety net). The save response is also
+ *    copied into the taskbar clock, so the frozen time is the server's.
  * 2. "Submit to Leaderboard" is an explicit click. The score is computed on
  *    the server from the Save document; nothing score-related is sent.
+ *    The score shown below is the server's real score, not the taskbar estimate.
  */
 export default function EndScreen() {
-  const { state } = useWindows();
+  const { state, dispatch } = useWindows();
   const navigate = useNavigate();
 
   const [snapshot] = useState(() => ({
@@ -55,14 +57,17 @@ export default function EndScreen() {
   useEffect(() => {
     const controller = new AbortController();
     putSave(snapshot, controller.signal)
-      .then(() => setPhase('ready'))
+      .then((saved) => {
+        dispatch({ type: 'SYNC', save: saved });
+        setPhase('ready');
+      })
       .catch((err) => {
         if (err?.name === 'AbortError') return;
         setError(messageFor(err, 'Could not save your finished game.'));
         setPhase('saveError');
       });
     return () => controller.abort();
-  }, [snapshot, attempt]);
+  }, [snapshot, attempt, dispatch]);
 
   useEffect(() => () => submitRef.current?.abort(), []);
 

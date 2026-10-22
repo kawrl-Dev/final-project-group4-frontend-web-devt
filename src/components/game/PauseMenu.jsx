@@ -10,8 +10,6 @@ const buttonClass = `w-full bg-gray-300 px-3 py-1 text-black ${RAISED} ${PRESS} 
 
 const formatDate = (iso) => new Date(iso).toLocaleString();
 
-// Turns a failed save request into a message the player can act on.
-// (401 is already handled by api.js: it clears the token and goes to /login.)
 function messageFor(err) {
   switch (err?.kind) {
     case 'network':
@@ -50,16 +48,15 @@ export default function PauseMenu() {
 
   // status: 'checking' | 'none' | 'exists' | 'error'
   const [info, setInfo] = useState({ status: 'checking', updatedAt: null });
-  const [confirm, setConfirm] = useState(null); // null | 'save' | 'load' | 'delete' | 'menu'
+  const [confirm, setConfirm] = useState(null);
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState(null); // { kind: 'ok' | 'error', text }
+  const [message, setMessage] = useState(null);
 
   const controllerRef = useRef(null);
   const resumeRef = useRef(null);
 
   const resume = () => dispatch({ type: 'RESUME' });
 
-  // Ask once, when the menu opens, whether a save exists.
   useEffect(() => {
     const controller = new AbortController();
     getSave(controller.signal)
@@ -71,23 +68,22 @@ export default function PauseMenu() {
     return () => controller.abort();
   }, []);
 
-  // Closing the menu cancels any save/load/delete still in flight on the client.
   useEffect(() => () => controllerRef.current?.abort(), []);
 
-  // Put keyboard focus back where it was when the menu closes.
   useEffect(() => {
     const previous = document.activeElement;
     return () => previous?.focus?.();
   }, []);
 
-  // Focus Resume when the menu opens and whenever a confirm step goes away.
   useEffect(() => {
     if (!confirm) resumeRef.current?.focus();
   }, [confirm]);
 
-  // Esc: cancel the confirm step first, otherwise resume. Ignored while a
-  // request is running. (Game.jsx only listens for Esc while the menu is closed,
-  // so the two never fire on the same key press.)
+  /* 
+    Esc: cancel the confirm step first, otherwise resume. Ignored while a
+    request is running. (Game.jsx only listens for Esc while the menu is closed,
+    so the two never fire on the same key press.)
+   */
   useEffect(() => {
     const onKeyDown = (e) => {
       if (e.key !== 'Escape' || e.repeat || busy) return;
@@ -98,7 +94,6 @@ export default function PauseMenu() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [busy, confirm, dispatch]);
 
-  // Shared wrapper: clears messages, shows "Working...", turns errors into text.
   const run = async (action) => {
     setConfirm(null);
     setMessage(null);
@@ -121,6 +116,7 @@ export default function PauseMenu() {
         { solved: state.solved, readDocuments: state.readDocuments.map((d) => d.slug) },
         signal
       );
+      dispatch({ type: 'SYNC', save: res });
       setInfo({ status: 'exists', updatedAt: res.updatedAt });
       setMessage({ kind: 'ok', text: 'Game saved.' });
     });
@@ -128,16 +124,17 @@ export default function PauseMenu() {
   const load = () =>
     run(async (signal) => {
       const data = await getSave(signal);
-      // Throw away everything cached from the old session, then pre-fill the
-      // cache with the unlocked items from the save so they open right away.
       clearItemCache();
       (data.items ?? []).forEach((item) => setCachedItem(item.slug, item));
-      // LOAD also closes the windows and the menu.
       dispatch({
         type: 'LOAD',
         solved: data.solved ?? [],
         readDocuments: data.readDocuments ?? [],
+        wrongGuesses: data.wrongGuesses ?? 0,
+        startedAt: data.startedAt,
+        finishedAt: data.finishedAt,
       });
+      if (data.finishedAt) dispatch({ type: 'FINISH' });
     });
 
   const remove = () =>
@@ -145,17 +142,16 @@ export default function PauseMenu() {
       try {
         await deleteSave(signal);
       } catch (err) {
-        // Already gone is fine: the player wanted it gone.
         if (err?.kind !== 'notFound') throw err;
       }
+      clearItemCache();
+      dispatch({ type: 'RESET' });
       setInfo({ status: 'none', updatedAt: null });
-      setMessage({ kind: 'ok', text: 'Save deleted.' });
+      setMessage({ kind: 'ok', text: 'Save deleted. Your run was reset.' });
     });
 
   const leave = () => navigate('/menu', { replace: true });
 
-  // Save first. If the save fails, run() shows the error and we stay here,
-  // so the player never leaves believing their progress was stored.
   const saveAndExit = () =>
     run(async (signal) => {
       await putSave(
@@ -182,7 +178,7 @@ export default function PauseMenu() {
       action: load,
     },
     delete: {
-      text: 'Delete your save? This cannot be undone.',
+      text: 'Delete your save? This cannot be undone, and your current run will restart from zero.',
       label: 'Delete',
       action: remove,
     },
@@ -239,26 +235,18 @@ export default function PauseMenu() {
                 Resume
               </button>
               <button
-                type="button"
-                disabled={busy || checking}
-                onClick={() => (noSave ? save() : setConfirm('save'))}
-                className={buttonClass}
-              >
+                type="button" disabled={busy || checking} onClick={() => (noSave ? save() : setConfirm('save'))} className={buttonClass} >
                 Save game
               </button>
               <button
-                type="button"
-                disabled={busy || checking || noSave}
-                onClick={() => setConfirm('load')}
-                className={buttonClass}
+                type="button" disabled={busy || checking || noSave}
+                onClick={() => setConfirm('load')} className={buttonClass}
               >
                 Load game
               </button>
               <button
-                type="button"
-                disabled={busy || checking || noSave}
-                onClick={() => setConfirm('delete')}
-                className={buttonClass}
+                type="button" disabled={busy || checking || noSave}
+                onClick={() => setConfirm('delete')} className={buttonClass}
               >
                 Delete save
               </button>

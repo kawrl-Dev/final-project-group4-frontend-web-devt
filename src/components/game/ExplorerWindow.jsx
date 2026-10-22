@@ -62,7 +62,7 @@ export default function ExplorerWindow({ onClose }) {
   }, [item, dispatch]);
 
   useEffect(() => {
-    if (item?.isFinal && !item.locked) dispatch({ type: 'FINISH' });
+    if (item?.isFinal && !item.locked) dispatch({ type: 'FINISH', at: Date.now() });
   }, [item, dispatch]);
 
   const handleOpen = (child) => {
@@ -83,7 +83,7 @@ export default function ExplorerWindow({ onClose }) {
         ),
       });
     }
-    dispatch({ type: 'SOLVE', slug: lockTarget.slug });
+    dispatch({ type: 'SOLVE', slug: lockTarget.slug, at: Date.now() });
 
     const solvedSlugs = state.solved.includes(lockTarget.slug)
       ? state.solved
@@ -91,7 +91,9 @@ export default function ExplorerWindow({ onClose }) {
     putSave({
       solved: solvedSlugs,
       readDocuments: state.readDocuments.map((d) => d.slug),
-    }).catch(() => {});
+    })
+      .then((saved) => dispatch({ type: 'SYNC', save: saved }))
+      .catch(() => {});
 
     setLockTarget(null);
   };
@@ -132,7 +134,6 @@ export default function ExplorerWindow({ onClose }) {
         </div>
       </div>
 
-      {/* Black file area with green text. Courier Prime = the default font-sans */}
       <div className={`min-h-0 flex-1 overflow-auto bg-black p-3 font-sans text-green-400 ${SUNKEN}`}>
         {lockTarget ? (
           <LockPrompt

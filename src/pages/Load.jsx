@@ -27,6 +27,8 @@ export default function Load() {
             setSave({
             solvedCount: data.solved?.length ?? 0,
             readCount: data.readDocuments?.length ?? 0,
+            wrongGuesses: data.wrongGuesses ?? 0,
+            finished: !!data.finishedAt,
             updatedAt: data.updatedAt,
             });
             setStatus('ready');
@@ -109,8 +111,8 @@ export default function Load() {
             {status === 'ready' && save && (
                 <>
                     <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-[clamp(1rem,1.6vw,1.25rem)]">
-                        <dt className="text-brand-spring">Location</dt>
-                        <dd className="break-all text-white">{save.location}</dd>
+                        <dt className="text-brand-spring">Status</dt>
+                        <dd className="text-white">{save.finished ? 'Finished' : 'In progress'}</dd>
                         <dt className="text-brand-spring">Solved</dt>
                         <dd className="text-white">{save.solvedCount}</dd>
                         <dt className="text-brand-spring">Wrong Guesses</dt>
@@ -123,7 +125,7 @@ export default function Load() {
 
                     <div className="grid gap-4 sm:grid-cols-2">
                         <button onClick={() => navigate(PLAY_ROUTE, { state: { resume: true } })} className={buttonClass}>
-                            Continue
+                            {save.finished ? 'View Result' : 'Continue'}
                         </button>
                         <button onClick={() => dialogRef.current?.showModal()} disabled={busy} className={outlineClass}>
                             Delete Save
