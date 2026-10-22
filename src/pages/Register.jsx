@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { saveToken } from '../lib/auth';
-import { API_BASE } from '../lib/config';   // add
+import { API_BASE } from '../lib/config';
+import { useAuth } from '../hooks/useAuth';
 import FloatingBinary from '../components/FloatingBinary';
 import bg from '../assets/home-page.png';
 
@@ -20,6 +20,7 @@ export default function Register() {
   const navigate = useNavigate();
   const dialogRef = useRef(null);
   const tokenRef = useRef('');
+  const { login } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
