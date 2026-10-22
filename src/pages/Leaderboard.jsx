@@ -146,7 +146,7 @@ export default function Leaderboard() {
             <h2 id="delete-entry-title" className="font-pixel font-normal text-white text-[clamp(1.5rem,3vw,2rem)]">
               Delete entry?
             </h2>
-            <p className="mt-2 break-words text-white/80 text-[clamp(0.875rem,1.3vw,1rem)]">
+            <p className="mt-2 wrap-break-word text-white/80 text-[clamp(0.875rem,1.3vw,1rem)]">
               {pending ? `Remove ${pending.username}'s score of ${pending.score.toLocaleString()} from the leaderboard? This cannot be undone.` : ''}
             </p>
             <div className="mt-6 grid grid-cols-2 gap-4">
