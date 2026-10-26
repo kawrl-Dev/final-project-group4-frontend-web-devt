@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { clearItemCache, setCachedItem } from '../../hooks/useItem';
 import { useWindows } from '../../hooks/useWindows';
+import { loadFromSave } from '../../lib/gameState';
 import { deleteSave, getSave, putSave } from '../../services/saveService';
 import Window95, { RAISED } from './Window95';
 
@@ -39,6 +40,8 @@ function describe(info) {
 /**
  * The pause menu. Rendered by Game.jsx only while state.paused is true, so it
  * mounts fresh every time (and checks the server for a save on mount).
+ * The server pause/resume calls are made by PauseLayer in Game.jsx, so Esc, the X,
+ * Resume and Load all go through the same path.
  * It sits on top of the windows without touching them: Resume brings the
  * player back to exactly where they were.
  */
@@ -126,14 +129,9 @@ export default function PauseMenu() {
       const data = await getSave(signal);
       clearItemCache();
       (data.items ?? []).forEach((item) => setCachedItem(item.slug, item));
-      dispatch({
-        type: 'LOAD',
-        solved: data.solved ?? [],
-        readDocuments: data.readDocuments ?? [],
-        wrongGuesses: data.wrongGuesses ?? 0,
-        startedAt: data.startedAt,
-        finishedAt: data.finishedAt,
-      });
+      // LOAD closes this menu (paused becomes false). Game.jsx then resumes the server clock,
+      // because the loaded save still has the pause that was recorded when this menu opened.
+      dispatch(loadFromSave(data));
       if (data.finishedAt) dispatch({ type: 'FINISH' });
     });
 
@@ -198,6 +196,12 @@ const runConfirmed = () => {
       <Window95 title="Paused" size="h-auto w-96" onClose={() => !busy && resume()}>
         <div className="flex flex-col gap-3 p-3 text-black">
           <p role="status" className="text-sm">{describe(info)}</p>
+
+          {state.pauseFailed && (
+            <p role="status" className="border-l-4 border-amber-600 bg-amber-100 px-2 py-1 text-sm text-amber-900">
+              Pause not recorded. The server clock is still running.
+            </p>
+          )}
 
           {busy && <p role="status" className="animate-pulse text-sm">Working...</p>}
 

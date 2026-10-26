@@ -19,13 +19,10 @@ function Toggle({ id, label, hint, checked, onChange }) {
                 <p className={hintClass}>{hint}</p>
             </div>
             <button
-                type="button"
-                role="switch"
-                aria-checked={checked}
-                aria-labelledby={id}
-                onClick={() => onChange(!checked)}
-                className={`${checked ? outlineClass : buttonClass} min-w-24`}>
-                    {checked ? 'Off' : 'On'}
+                type="button" role="switch" aria-checked={checked} aria-labelledby={id} 
+                onClick={() => onChange(!checked)} className={`${checked ? buttonClass : outlineClass} min-w-24`
+                }>
+                    {checked ? 'On' : 'Off'}
             </button>
         </div>
     );
@@ -125,6 +122,13 @@ export default function SettingsDialog({ open, onClose, showSaveDelete = true })
                     format={(v) => `${v}%`}
                     onChange={(v) => update({ brightness: v })}/>
                 
+                <Toggle
+                    id="show-score"
+                    label="Show Score"
+                    hint="Shows your score on the taskbar while you play. The timer is always shown."
+                    checked={s.showScore}
+                    onChange={(v) => update({ showScore: v })}/>
+
                 <h3 className="border-t-2 border-brand-forest pt-4 font-pixel font-normal text-white text-[clamp(1.25rem,2.4vw,1.75rem)]">
                     Accessibility
                 </h3>

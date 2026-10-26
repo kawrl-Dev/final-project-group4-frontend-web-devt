@@ -1,18 +1,14 @@
 import { useEffect, useState } from 'react';
+import { useSettings } from '../../hooks/useSettings';
 import { useWindows } from '../../hooks/useWindows';
+import { activeSeconds, formatTime } from '../../lib/clock';
+import { displayScore } from '../../lib/scoreView';
 import { RAISED, SUNKEN } from './Window95';
-
-const pad = (n) => String(n).padStart(2, '0');
-
-const HALF_MARKS = 300;
-const WRONG_PENALTY = 50;
-
-const estimateScore = (seconds, wrongGuesses) =>
-  Math.max(0, Math.round((1000 * HALF_MARKS) / (HALF_MARKS + seconds)) - WRONG_PENALTY * wrongGuesses);
 
 export default function Taskbar() {
   const { state } = useWindows();
-  const { startedAt, finishedAt, finished, wrongGuesses } = state;
+  const { showScore } = useSettings();
+  const { startedAt, finishedAt, finished, pausedAt, pausedMs, creditLeftMs, score } = state;
 
   const [now, setNow] = useState(() => Date.now());
 
@@ -24,11 +20,10 @@ export default function Taskbar() {
     return () => clearInterval(id); // clean up when leaving /game or when the run stops
   }, [running]);
 
-  const end = finishedAt ?? now;
-  const seconds = startedAt === null ? 0 : Math.max(0, Math.round((end - startedAt) / 1000));
-  const score = estimateScore(seconds, wrongGuesses);
-
-  const time = `${pad(Math.floor(seconds / 60))}:${pad(seconds % 60)}`;
+  // Active time only: time spent in the pause menu does not count (up to the server's cap).
+  const seconds = activeSeconds({ startedAt, finishedAt, pausedAt, pausedMs, creditLeftMs, now });
+  const time = formatTime(seconds);
+  const shownScore = displayScore(score);
 
   return (
     <div className={`absolute inset-x-0 bottom-0 z-30 flex h-10 items-center gap-2 bg-gray-300 px-2 font-pixel text-black ${RAISED}`}>
@@ -39,17 +34,19 @@ export default function Taskbar() {
           </span>
         )}
       </div>
-      <span
-        role="img"
-        aria-label={`Estimated score ${score}`}
-        title="Estimate only. Your real score is calculated by the server when you submit."
-        className={`flex items-center gap-2 bg-black px-3 py-0.5 ${SUNKEN}`}
-      >
-        <span aria-hidden="true" className="text-sm text-green-300">Est. Score</span>
-        <span aria-hidden="true" className="min-w-[4ch] text-right text-xl font-bold leading-none tabular-nums text-green-400">
-          {score}
+      {showScore && (
+        <span
+          role="img"
+          aria-label={`Score ${shownScore}`}
+          title="Your score so far. Your final score is worked out by the server when you finish."
+          className={`flex items-center gap-2 bg-black px-3 py-0.5 ${SUNKEN}`}
+        >
+          <span aria-hidden="true" className="text-sm text-green-300">Score</span>
+          <span aria-hidden="true" className="min-w-[4ch] text-right text-xl font-bold leading-none tabular-nums text-green-400">
+            {shownScore}
+          </span>
         </span>
-      </span>
+      )}
       <span role="timer" className={`px-3 py-1 text-sm tabular-nums ${SUNKEN}`}>{time}</span>
     </div>
   );
