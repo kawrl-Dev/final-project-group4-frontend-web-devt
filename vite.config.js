@@ -8,7 +8,7 @@ export default defineConfig({
     server: {
       proxy: {
         '/api': {
-          target: 'https://localhost:5000', //change it to the actual render api link if all changes are done
+          target: 'http://localhost:5000', //change it to the actual render api link if all changes are
           changeOrigin: true, 
           secure: true,
         },
