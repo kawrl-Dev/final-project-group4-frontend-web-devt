@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useItem } from '../../hooks/useItem';
 import { useWindows } from '../../hooks/useWindows';
-import { solve } from '../../services/gameService';
+import { revealHint, solve } from '../../services/gameService';
 import { LockIcon } from './PixelIcons';
 import { RAISED } from './Window95';
 
@@ -22,6 +22,21 @@ function messageFor(err) {
   }
 }
 
+// Same idea for a failed hint request.
+function hintMessageFor(err) {
+  switch (err?.kind) {
+    case 'network':
+      return 'Could not reach the server.';
+    case 'unauthorized':
+      return 'Your session expired. Redirecting to log in...';
+    case 'notFound':
+    case 'badRequest':
+      return 'There is no hint for this lock.';
+    default:
+      return 'Could not load the hint. Try again.';
+  }
+}
+
 const buttonClass = `bg-gray-300 px-3 py-0.5 text-sm text-black ${RAISED} disabled:cursor-not-allowed disabled:text-gray-500`;
 
 /**
@@ -37,9 +52,49 @@ export default function LockPrompt({ target, onSolved, onCancel }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [showHint, setShowHint] = useState(false);
+  const [hintText, setHintText] = useState(null); // set once the server has sent the hint
+  const [hintBusy, setHintBusy] = useState(false);
+  const [hintError, setHintError] = useState('');
   const controllerRef = useRef(null);
+  const hintControllerRef = useRef(null);
 
-  useEffect(() => () => controllerRef.current?.abort(), []);
+  useEffect(() => () => {
+    controllerRef.current?.abort();
+    hintControllerRef.current?.abort();
+  }, []);
+
+  // The hint text comes from the server. The first reveal for a lock is charged there;
+  // hiding and showing again reuses the text we already have and costs nothing.
+  const handleHintToggle = async () => {
+    if (hintBusy) return;
+    if (showHint) {
+      setShowHint(false);
+      return;
+    }
+    if (hintText !== null) {
+      setShowHint(true);
+      return;
+    }
+
+    setHintError('');
+    setHintBusy(true);
+    const controller = new AbortController();
+    hintControllerRef.current = controller;
+    try {
+      const result = await revealHint(target.slug, controller.signal);
+      if (typeof result?.hint !== 'string') {
+        setHintError('Could not load the hint. Try again.');
+        return;
+      }
+      setHintText(result.hint);
+      setShowHint(true);
+    } catch (err) {
+      if (err?.name === 'AbortError') return;
+      setHintError(hintMessageFor(err));
+    } finally {
+      if (!controller.signal.aborted) setHintBusy(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -119,19 +174,25 @@ export default function LockPrompt({ target, onSolved, onCancel }) {
         <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-3">
           <p className="wrap-break-word text-amber-300">{item.lock?.prompt ?? 'This item is locked.'}</p>
 
-          {item.lock?.hint && (
+          {item.lock?.hasHint && (
             <div>
               <button
                 type="button"
-                onClick={() => setShowHint((s) => !s)}
+                onClick={handleHintToggle}
+                disabled={hintBusy}
                 aria-expanded={showHint}
                 className={`cursor-pointer ${buttonClass}`}
               >
-                {showHint ? 'Hide hint' : 'Show hint'}
+                {hintBusy ? 'Loading hint...' : showHint ? 'Hide hint' : 'Show hint'}
               </button>
-              {showHint && (
+              {showHint && hintText !== null && (
                 <p className="mt-2 border-l-4 border-green-500 bg-green-500/10 py-1 pl-2 wrap-break-word">
-                  {item.lock.hint}
+                  {hintText}
+                </p>
+              )}
+              {hintError && (
+                <p role="alert" className="mt-2 border-l-4 border-red-400 bg-red-400/10 px-2 py-1 text-red-300">
+                  {hintError}
                 </p>
               )}
             </div>
