@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Link, useLocation } from 'react-router';
+import { Link } from 'react-router';
 import { clearItemCache, setCachedItem } from '../hooks/useItem';
-import { getSave } from '../services/saveService';
+import { loadFromSave } from '../lib/gameState';
+import { getSave, pauseRun, resumeRun } from '../services/saveService';
 import WindowProvider from '../context/WindowProvider';
 import { useWindows } from '../hooks/useWindows';
 import Desktop from '../components/game/Desktop';
@@ -25,65 +26,86 @@ function WindowLayer() {
 }
 
 function ResumeLayer() {
-  const { state: routeState } = useLocation();
   const { dispatch } = useWindows();
-  const resume = !!routeState?.resume;
-  const [status, setStatus] = useState(resume ? 'loading' : 'done');
+  const [status, setStatus] = useState('loading'); // 'loading' | 'done' | 'error'
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
-    if (!resume) return;
     const controller = new AbortController();
     getSave(controller.signal)
-        .then((data) => {
-          clearItemCache();
-          (data.items ?? []).forEach((item) => setCachedItem(item.slug, item));
-          // LOAD resumes the clock from the stored startedAt (it does not restart it).
-          dispatch({
-            type: 'LOAD',
-            solved: data.solved ?? [],
-            readDocuments: data.readDocuments ?? [],
-            wrongGuesses: data.wrongGuesses ?? 0,
-            startedAt: data.startedAt,
-            finishedAt: data.finishedAt,
-          });
-          // A finished run goes straight to the end screen (LOAD resets `finished`, so FINISH has to come after it).
-          if (data.finishedAt) dispatch({ type: 'FINISH' });
-          setStatus('done');
-        })
-        .catch((err) => {
-          if (err?.name === 'AbortError') return;
-          setStatus(err?.kind === 'notFound' ? 'done' : 'error');
-        });
+      .then((data) => {
+        clearItemCache();
+        (data.items ?? []).forEach((item) => setCachedItem(item.slug, item));
+        dispatch(loadFromSave(data));
+        // A finished run goes straight to the end screen (LOAD resets `finished`, so FINISH has to come after it).
+        if (data.finishedAt) dispatch({ type: 'FINISH' });
+        setStatus('done');
+      })
+      .catch((err) => {
+        if (err?.name === 'AbortError') return;
+        setStatus(err?.kind === 'notFound' ? 'done' : 'error');
+      });
     return () => controller.abort();
-  }, [resume, dispatch]);
+  }, [attempt, dispatch]);
 
   if (status === 'done') return null;
   return (
-      <div className="absolute inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-black font-pixel text-xl text-green-300" style={glow}>
-        {status === 'loading' ? (
-            <p role="status" className="animate-pulse">loading your save...</p>
-        ) : (
-            <>
-              <p role="alert">Could not load your save.</p>
-              <Link to="/menu" className="underline">Back to menu</Link>
-            </>
-        )}
-      </div>
+    <div className="absolute inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-black font-pixel text-xl text-green-300" style={glow}>
+      {status === 'loading' ? (
+        <p role="status" className="animate-pulse">loading your save...</p>
+      ) : (
+        <>
+          <p role="alert">Could not load your save.</p>
+          <button
+            type="button"
+            className="cursor-pointer underline"
+            onClick={() => {
+              setStatus('loading');
+              setAttempt((a) => a + 1);
+            }}
+          >
+            Try again
+          </button>
+          <Link to="/menu" className="underline">Back to menu</Link>
+        </>
+      )}
+    </div>
   );
 }
 
 function PauseLayer() {
   const { state, dispatch } = useWindows();
-  const { paused, finished } = state;
+  const { paused, finished, serverPaused } = state;
 
   useEffect(() => {
     if (paused || finished) return;
     const onKeyDown = (e) => {
-      if (e.key === 'Escape' && !e.repeat) dispatch({ type: 'PAUSE' });
+      if (e.key === 'Escape' && !e.repeat) dispatch({ type: 'PAUSE', at: Date.now() });
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [paused, finished, dispatch]);
+
+  useEffect(() => {
+    if (!paused) return;
+    const controller = new AbortController();
+    pauseRun(controller.signal)
+      .then((res) => dispatch({ type: 'PAUSE_RESULT', res }))
+      .catch((err) => {
+        if (err?.name === 'AbortError') return;
+        dispatch({ type: 'PAUSE_FAILED' });
+      });
+    return () => controller.abort();
+  }, [paused, dispatch]);
+
+  useEffect(() => {
+    if (paused || finished || !serverPaused) return;
+    const controller = new AbortController();
+    resumeRun(controller.signal)
+      .then((res) => dispatch({ type: 'RESUME_RESULT', res }))
+      .catch(() => {}); // a later solve, wrong guess or hint also resumes the server clock
+    return () => controller.abort();
+  }, [paused, finished, serverPaused, dispatch]);
 
   return paused ? <PauseMenu /> : null;
 }

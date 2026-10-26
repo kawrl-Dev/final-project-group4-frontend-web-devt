@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { useItem } from '../../hooks/useItem';
 import { useWindows } from '../../hooks/useWindows';
-import { solve } from '../../services/gameService';
+import { revealHint, solve } from '../../services/gameService';
+import { HINT_COST } from '../../lib/scoreView';
 import { LockIcon } from './PixelIcons';
 import { RAISED } from './Window95';
 
-// Turns a failed solve() call into a message the player can act on.
-// (401 is already handled by api.js: it clears the token and goes to /login.)
+// Turns a failed solve() call into a message the player can act on. (401 is already handled by api.js: it clears the token and goes to /login.)
 function messageFor(err) {
   switch (err?.kind) {
     case 'network':
@@ -15,10 +15,33 @@ function messageFor(err) {
       return 'Your session expired. Redirecting to log in...';
     case 'badRequest':
       return 'That answer was not accepted. Check it and try again.';
+    case 'conflict':
+      return 'The server was busy. Try again.';
+    case 'rateLimited':
+      return 'Too many attempts. Wait a moment and try again.';
     case 'server':
       return 'Something went wrong on the server. Try again.';
     default:
       return 'Could not check your answer. Try again.';
+  }
+}
+
+// Same idea for a failed hint request.
+function hintMessageFor(err) {
+  switch (err?.kind) {
+    case 'network':
+      return 'Could not reach the server.';
+    case 'unauthorized':
+      return 'Your session expired. Redirecting to log in...';
+    case 'notFound':
+    case 'badRequest':
+      return 'There is no hint for this lock.';
+    case 'conflict':
+      return 'The server was busy. Try again.';
+    case 'rateLimited':
+      return 'Too many requests. Wait a moment and try again.';
+    default:
+      return 'Could not load the hint. Try again.';
   }
 }
 
@@ -31,15 +54,65 @@ const buttonClass = `bg-gray-300 px-3 py-0.5 text-sm text-black ${RAISED} disabl
  * onCancel  = go back to the folder
  */
 export default function LockPrompt({ target, onSolved, onCancel }) {
-  const { dispatch } = useWindows();
+  const { state, dispatch } = useWindows();
   const { item, loading, error: loadError, waking, refetch } = useItem(target.slug);
   const [answer, setAnswer] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [showHint, setShowHint] = useState(false);
+  const [hintText, setHintText] = useState(null);
+  const [confirmingHint, setConfirmingHint] = useState(false);
+  const [hintBusy, setHintBusy] = useState(false);
+  const [hintError, setHintError] = useState('');
   const controllerRef = useRef(null);
+  const hintControllerRef = useRef(null);
 
-  useEffect(() => () => controllerRef.current?.abort(), []);
+  useEffect(() => () => {
+    controllerRef.current?.abort();
+    hintControllerRef.current?.abort();
+  }, []);
+
+  const alreadyPaid = state.hintsByLock.includes(target.slug);
+
+  const loadHint = async () => {
+    setConfirmingHint(false);
+    setHintError('');
+    setHintBusy(true);
+    const controller = new AbortController();
+    hintControllerRef.current = controller;
+    try {
+      const result = await revealHint(target.slug, controller.signal);
+      if (typeof result?.hint !== 'string') {
+        setHintError('Could not load the hint. Try again.');
+        return;
+      }
+      dispatch({ type: 'HINT_REVEALED', slug: target.slug, score: result.score });
+      setHintText(result.hint);
+      setShowHint(true);
+    } catch (err) {
+      if (err?.name === 'AbortError') return;
+      setHintError(hintMessageFor(err));
+    } finally {
+      if (!controller.signal.aborted) setHintBusy(false);
+    }
+  };
+
+  const handleHintToggle = () => {
+    if (hintBusy) return;
+    if (showHint) {
+      setShowHint(false);
+      return;
+    }
+    if (hintText !== null) {
+      setShowHint(true);
+      return;
+    }
+    if (!alreadyPaid) {
+      setConfirmingHint((c) => !c);
+      return;
+    }
+    loadHint();
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -59,12 +132,11 @@ export default function LockPrompt({ target, onSolved, onCancel }) {
     try {
       const result = await solve(target.slug, trimmed, controller.signal);
       if (result?.correct && result.item) {
-        onSolved(result.item);
+        onSolved(result.item, result.score);
         return;
       }
       if (!result?.correct) {
-        // The server counted this wrong guess too. This copy only feeds the score estimate in the taskbar; the server's count is what gets scored.
-        dispatch({ type: 'WRONG_GUESS', at: Date.now() });
+        dispatch({ type: 'WRONG_GUESS', at: Date.now(), score: result?.score });
       }
       setError(result?.correct ? 'Unlocked, but the server sent no item. Try again.' : 'Wrong answer. Try again.');
       setAnswer('');
@@ -82,7 +154,8 @@ export default function LockPrompt({ target, onSolved, onCancel }) {
       onKeyDown={(e) => {
         if (e.key !== 'Escape') return;
         e.stopPropagation();
-        onCancel();
+        if (confirmingHint) setConfirmingHint(false);
+        else onCancel();
       }}
     >
       <div className="flex items-center gap-3">
@@ -105,7 +178,6 @@ export default function LockPrompt({ target, onSolved, onCancel }) {
         </div>
       )}
 
-      {/* Safety net: the server says this item is already open. */}
       {item && !item.locked && (
         <div>
           <p>This item is already unlocked.</p>
@@ -119,19 +191,40 @@ export default function LockPrompt({ target, onSolved, onCancel }) {
         <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-3">
           <p className="wrap-break-word text-amber-300">{item.lock?.prompt ?? 'This item is locked.'}</p>
 
-          {item.lock?.hint && (
+          {item.lock?.hasHint && (
             <div>
               <button
                 type="button"
-                onClick={() => setShowHint((s) => !s)}
+                onClick={handleHintToggle}
+                disabled={hintBusy}
                 aria-expanded={showHint}
                 className={`cursor-pointer ${buttonClass}`}
               >
-                {showHint ? 'Hide hint' : 'Show hint'}
+                {hintBusy ? 'Loading hint...' : showHint ? 'Hide hint' : 'Show hint'}
               </button>
-              {showHint && (
+              {confirmingHint && (
+                <div role="alertdialog" aria-label="Confirm hint" className="mt-2 border-l-4 border-amber-300 bg-amber-300/10 px-2 py-1">
+                  <p className="text-amber-200">
+                    This hint costs {HINT_COST} points. Showing it again later on this lock is free.
+                  </p>
+                  <div className="mt-2 flex gap-2">
+                    <button type="button" onClick={loadHint} autoFocus className={`cursor-pointer ${buttonClass}`}>
+                      Reveal hint
+                    </button>
+                    <button type="button" onClick={() => setConfirmingHint(false)} className={`cursor-pointer ${buttonClass}`}>
+                      Not now
+                    </button>
+                  </div>
+                </div>
+              )}
+              {showHint && hintText !== null && (
                 <p className="mt-2 border-l-4 border-green-500 bg-green-500/10 py-1 pl-2 wrap-break-word">
-                  {item.lock.hint}
+                  {hintText}
+                </p>
+              )}
+              {hintError && (
+                <p role="alert" className="mt-2 border-l-4 border-red-400 bg-red-400/10 px-2 py-1 text-red-300">
+                  {hintError}
                 </p>
               )}
             </div>
@@ -175,7 +268,6 @@ export default function LockPrompt({ target, onSolved, onCancel }) {
         </form>
       )}
 
-      {/* While loading or on a load error there is no form, so keep a way out. */}
       {(loading || loadError) && (
         <div>
           <button type="button" onClick={onCancel} className={`cursor-pointer ${buttonClass}`}>
