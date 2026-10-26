@@ -73,7 +73,7 @@ export default function ExplorerWindow({ onClose }) {
     setStack((s) => [...s, { slug: child.slug, name: child.name }]);
   };
 
-  const handleSolved = (unlockedItem) => {
+  const handleSolved = (unlockedItem, score) => {
     setCachedItem(lockTarget.slug, unlockedItem);
     if (item?.children) {
       setCachedItem(current.slug, {
@@ -83,7 +83,7 @@ export default function ExplorerWindow({ onClose }) {
         ),
       });
     }
-    dispatch({ type: 'SOLVE', slug: lockTarget.slug, at: Date.now() });
+    dispatch({ type: 'SOLVE', slug: lockTarget.slug, at: Date.now(), score });
 
     const solvedSlugs = state.solved.includes(lockTarget.slug)
       ? state.solved

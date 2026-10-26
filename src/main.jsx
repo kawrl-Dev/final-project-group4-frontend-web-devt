@@ -13,6 +13,7 @@ import Menu from './pages/Menu';
 import Skip from './components/Skip';
 import Leaderboard from './pages/Leaderboard'
 import AdminUsers from './pages/AdminUsers'
+import NotFound from './pages/NotFound'
 import AuthProvider from './context/AuthProvider';
 import { applySettings } from './lib/settings';
 
@@ -31,6 +32,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
           <Route path="/load" element={<Load />} />
           <Route path="/leaderboard" element={<RequireAuth><Leaderboard /></RequireAuth>} />
           <Route path="/admin/users" element={<RequireAdmin><AdminUsers /></RequireAdmin>} />
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

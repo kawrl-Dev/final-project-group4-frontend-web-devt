@@ -1,13 +1,11 @@
 import { getToken, clearToken } from '../lib/auth';
 import { API_BASE } from '../lib/config';
 
-// kind: 'network' | 'unauthorized' | 'badRequest' | 'forbidden' | 'notFound' | 'server' | 'unknown'
+// kind: 'network' | 'unauthorized' | 'badRequest' | 'forbidden' | 'notFound' | 'conflict' | 'rateLimited' | 'server' | 'unknown'
 export class ApiError extends Error {
   constructor(kind, status, message) {
-    super(message);
-    this.name = 'ApiError';
-    this.kind = kind;
-    this.status = status;
+    super(message); this.name = 'ApiError';
+    this.kind = kind; this.status = status;
   }
 }
 
@@ -16,6 +14,8 @@ function kindFor(status) {
   if (status === 401) return 'unauthorized';
   if (status === 403) return 'forbidden';
   if (status === 404) return 'notFound';
+  if (status === 409) return 'conflict'; // SCORE_CONFLICT: two score writes collided, safe to retry
+  if (status === 429) return 'rateLimited';
   if (status >= 500) return 'server';
   return 'unknown';
 }
