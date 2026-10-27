@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
+import { useCountdown } from '../../hooks/useCountdown';
 import { useItem } from '../../hooks/useItem';
 import { useWindows } from '../../hooks/useWindows';
+import { DEFAULT_RETRY_SECONDS } from '../../lib/countdown';
 import { revealHint, solve } from '../../services/gameService';
 import { HINT_COST } from '../../lib/scoreView';
 import { LockIcon } from './PixelIcons';
 import { RAISED } from './Window95';
 
-// Turns a failed solve() call into a message the player can act on. (401 is already handled by api.js: it clears the token and goes to /login.)
 function messageFor(err) {
   switch (err?.kind) {
     case 'network':
@@ -66,6 +67,9 @@ export default function LockPrompt({ target, onSolved, onCancel }) {
   const [hintError, setHintError] = useState('');
   const controllerRef = useRef(null);
   const hintControllerRef = useRef(null);
+  // Server said 429: solving and buying hints pause until `waitLeft` reaches 0. Showing an already-paid hint stays free.
+  const { left: waitLeft, start: startWait } = useCountdown();
+  const waiting = waitLeft > 0;
 
   useEffect(() => () => {
     controllerRef.current?.abort();
@@ -75,6 +79,7 @@ export default function LockPrompt({ target, onSolved, onCancel }) {
   const alreadyPaid = state.hintsByLock.includes(target.slug);
 
   const loadHint = async () => {
+    if (waiting) return;
     setConfirmingHint(false);
     setHintError('');
     setHintBusy(true);
@@ -91,6 +96,10 @@ export default function LockPrompt({ target, onSolved, onCancel }) {
       setShowHint(true);
     } catch (err) {
       if (err?.name === 'AbortError') return;
+      if (err?.kind === 'rateLimited') {
+        startWait(err.retryAfterSeconds ?? DEFAULT_RETRY_SECONDS);
+        return;
+      }
       setHintError(hintMessageFor(err));
     } finally {
       if (!controller.signal.aborted) setHintBusy(false);
@@ -107,6 +116,7 @@ export default function LockPrompt({ target, onSolved, onCancel }) {
       setShowHint(true);
       return;
     }
+    if (waiting) return;
     if (!alreadyPaid) {
       setConfirmingHint((c) => !c);
       return;
@@ -116,7 +126,7 @@ export default function LockPrompt({ target, onSolved, onCancel }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (busy) return;
+    if (busy || waiting) return;
 
     const trimmed = answer.trim();
     if (!trimmed) {
@@ -142,6 +152,12 @@ export default function LockPrompt({ target, onSolved, onCancel }) {
       setAnswer('');
     } catch (err) {
       if (err?.name === 'AbortError') return;
+      if (err?.kind === 'rateLimited') {
+        // Blocked before scoring on the server, so it is not a wrong guess. Keep what they typed.
+        setError('');
+        startWait(err.retryAfterSeconds ?? DEFAULT_RETRY_SECONDS);
+        return;
+      }
       setError(messageFor(err));
     } finally {
       if (!controller.signal.aborted) setBusy(false);
@@ -196,7 +212,7 @@ export default function LockPrompt({ target, onSolved, onCancel }) {
               <button
                 type="button"
                 onClick={handleHintToggle}
-                disabled={hintBusy}
+                disabled={hintBusy || (waiting && !showHint && hintText === null)}
                 aria-expanded={showHint}
                 className={`cursor-pointer ${buttonClass}`}
               >
@@ -208,7 +224,7 @@ export default function LockPrompt({ target, onSolved, onCancel }) {
                     This hint costs {HINT_COST} points. Showing it again later on this lock is free.
                   </p>
                   <div className="mt-2 flex gap-2">
-                    <button type="button" onClick={loadHint} autoFocus className={`cursor-pointer ${buttonClass}`}>
+                    <button type="button" onClick={loadHint} disabled={waiting} autoFocus className={`cursor-pointer ${buttonClass}`}>
                       Reveal hint
                     </button>
                     <button type="button" onClick={() => setConfirmingHint(false)} className={`cursor-pointer ${buttonClass}`}>
@@ -257,9 +273,15 @@ export default function LockPrompt({ target, onSolved, onCancel }) {
             </p>
           )}
 
+          {waiting && (
+            <p role="status" className="border-l-4 border-amber-300 bg-amber-300/10 px-2 py-1 text-amber-200">
+              Too many attempts. You can try again in {waitLeft}s. Your answer was not counted.
+            </p>
+          )}
+
           <div className="flex gap-2">
-            <button type="submit" disabled={busy} className={`cursor-pointer ${buttonClass}`}>
-              {busy ? 'Checking...' : 'Unlock'}
+            <button type="submit" disabled={busy || waiting} className={`cursor-pointer ${buttonClass}`}>
+              {busy ? 'Checking...' : waiting ? `Wait ${waitLeft}s` : 'Unlock'}
             </button>
             <button type="button" onClick={onCancel} className={`cursor-pointer ${buttonClass}`}>
               Cancel
