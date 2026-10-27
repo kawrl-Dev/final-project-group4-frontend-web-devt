@@ -1,11 +1,14 @@
 import { getToken, clearToken } from '../lib/auth';
 import { API_BASE } from '../lib/config';
+import { parseRetryAfter } from '../lib/countdown';
 
 // kind: 'network' | 'unauthorized' | 'badRequest' | 'forbidden' | 'notFound' | 'conflict' | 'rateLimited' | 'server' | 'unknown'
+// retryAfterSeconds is only set when kind is 'rateLimited' (HTTP 429).
 export class ApiError extends Error {
-  constructor(kind, status, message) {
+  constructor(kind, status, message, retryAfterSeconds) {
     super(message); this.name = 'ApiError';
     this.kind = kind; this.status = status;
+    if (retryAfterSeconds !== undefined) this.retryAfterSeconds = retryAfterSeconds;
   }
 }
 
@@ -14,7 +17,7 @@ function kindFor(status) {
   if (status === 401) return 'unauthorized';
   if (status === 403) return 'forbidden';
   if (status === 404) return 'notFound';
-  if (status === 409) return 'conflict'; // SCORE_CONFLICT: two score writes collided, safe to retry
+  if (status === 409) return 'conflict';
   if (status === 429) return 'rateLimited';
   if (status >= 500) return 'server';
   return 'unknown';
@@ -51,11 +54,10 @@ export async function api(path, { method = 'GET', body, signal, auth = true } = 
       clearToken();
       window.location.assign('/login');
     }
-    throw new ApiError(kindFor(res.status), res.status, data?.error ?? `Request failed (${res.status})`);
+    const wait = res.status === 429 ? parseRetryAfter(data, res.headers.get('Retry-After')) : undefined;
+    throw new ApiError(kindFor(res.status), res.status, data?.error ?? `Request failed (${res.status})`, wait);
   }
 
-  // A 200 that is not JSON usually means the request hit Vercel's index.html
-  // rewrite instead of the API (VITE_API_URL missing in production).
   if (data === null) {
     throw new ApiError('server', res.status, 'Server sent an unreadable reply.');
   }
