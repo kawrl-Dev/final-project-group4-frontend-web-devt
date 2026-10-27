@@ -8,7 +8,7 @@ export default defineConfig({
     server: {
       proxy: {
         '/api': {
-          target: 'http://localhost:5000', //change it to the actual render api link if all changes are
+          target: 'https://minosdb-api.onrender.com/',
           changeOrigin: true, 
           secure: true,
         },
