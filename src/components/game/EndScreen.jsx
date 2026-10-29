@@ -9,7 +9,7 @@ import { submitScore } from '../../services/leaderboardService';
 import Window95, { RAISED } from './Window95';
 
 const PRESS = 'active:border-t-gray-700 active:border-l-gray-700 active:border-b-white active:border-r-white';
-const buttonClass = `block w-full bg-gray-300 px-3 py-1 text-center text-black ${RAISED} ${PRESS} enabled:cursor-pointer disabled:cursor-not-allowed disabled:text-gray-500`;
+const buttonClass = `block w-full bg-gray-300 px-3 py-1 text-center text-black text-lg ${RAISED} ${PRESS} enabled:cursor-pointer disabled:cursor-not-allowed disabled:text-gray-500`;
 
 function messageFor(err, fallback) {
   switch (err?.kind) {
@@ -156,7 +156,7 @@ export default function EndScreen() {
           )}
 
           {submit === 'done' && (
-            <p role="status" className="border-l-4 border-green-700 bg-green-100 px-2 py-1 text-sm text-green-900">
+            <p role="status" className="border-l-4 border-green-700 bg-green-100 px-2 py-1 text-sm text-green-900 font-sans">
               {typeof bestScore !== 'number'
                 ? 'Submitted!'
                 : result.improved === false
