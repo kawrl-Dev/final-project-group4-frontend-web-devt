@@ -116,7 +116,7 @@ export default function EndScreen() {
       <div aria-hidden="true" className="absolute inset-0 bg-black/70" />
       <Window95 title="Game Complete" size="h-auto w-[min(28rem,calc(100vw_-_4rem))]" onClose={leave}>
         <div className="flex flex-col gap-3 p-3 text-black">
-          <h2 className="text-lg">You found the final file.</h2>
+          <h2 className="text-lg font-sans">You found the final file.</h2>
 
           {phase === 'saving' && (
             <p role="status" className="animate-pulse text-sm">Saving your run...</p>
@@ -129,7 +129,7 @@ export default function EndScreen() {
           )}
 
           {submit !== 'done' && phase === 'ready' && (
-            <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+            <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm font-sans">
               <dt>Time played</dt>
               <dd className="text-right tabular-nums">{formatTime(seconds)}</dd>
               <dt>Locks solved</dt>
@@ -139,10 +139,10 @@ export default function EndScreen() {
 
           {submit === 'done' && run && (
             <section aria-label="Score breakdown" className="flex flex-col gap-2">
-              <p className="text-base">
+              <p className="text-base font-sans">
                 Rank: <strong>{rankFor(run.score)}</strong>
               </p>
-              <table className="w-full text-sm">
+              <table className="w-full text-sm font-sans">
                 <tbody>
                   {rows.map((row) => (
                     <tr key={row.key} className={row.strong ? 'border-t-2 border-gray-600 font-bold' : ''}>
