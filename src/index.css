@@ -24,6 +24,20 @@
     to { transform: translate3d(0, -50%, 0); }
 }
 
+@keyframes icon-hint {
+    0%, 100% { transform: scale(1); filter: drop-shadow(0 0 4px #16A34A); }
+    50% { transform: scale(1.25); filter: drop-shadow(0 0 14px #22C55E); }
+}
+
+.icon-hint {
+    animation: icon-hint 1.6s ease-in-out infinite;
+}
+
+html[data-reduce-motion='true'] .icon-hint {
+    outline: 2px solid #22C55E;
+    outline-offset: 4px;
+}
+
 .binary-col {
     animation: binary-float linear infinite;
     will-change: transform;
